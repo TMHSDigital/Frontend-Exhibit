@@ -53,5 +53,18 @@
     "dependencies": [],
     "accentColor": "#7c5cff"
   },
-  "exhibits": []
+  "exhibits": [
+    {
+      "slug": "gilded-age",
+      "title": "The Gilded Age",
+      "description": "Procedural gold leaf under a raking light. Press and drag to burnish through to the iron beneath. WebGL2, no libraries.",
+      "entry": "exhibits/gilded-age/index.html",
+      "tags": ["webgl", "shaders", "typography", "micro-interactions"],
+      "status": "live",
+      "author": "claude",
+      "createdAt": "2026-07-07",
+      "dependencies": [],
+      "accentColor": "#d9a850"
+    }
+  ]
 }

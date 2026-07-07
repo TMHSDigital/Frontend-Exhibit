@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>The Gilded Age</title>
+<meta name="description" content="Procedural gold leaf you can burnish through to the iron beneath. WebGL2, no libraries." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23d9a850'/%3E%3C/svg%3E" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,700;6..96,900&family=Libre+Caslon+Text:ital@0;1&family=Archivo:wght@500;600&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --gold: #d9a850;
+    --gold-deep: #8a6420;
+    --iron: #0e0b09;
+    --bone: #e8ddc8;
+    --ink: #241708;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--iron);
+    font-family: "Libre Caslon Text", Georgia, serif;
+    color: var(--ink);
+  }
+
+  canvas { display: block; }
+
+  #foil, #flakes {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  #foil { touch-action: none; cursor: none; }
+  #flakes { pointer-events: none; }
+
+  .stage-copy {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: clamp(1.25rem, 3vw, 2.5rem);
+  }
+
+  /* ── Header ── */
+  .plate-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .back {
+    pointer-events: auto;
+    font-family: "Archivo", sans-serif;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid rgb(36 23 8 / 0.4);
+    padding-bottom: 2px;
+  }
+  .back:hover, .back:focus-visible { border-bottom-color: var(--ink); }
+  .back:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+  .era {
+    font-family: "Archivo", sans-serif;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgb(36 23 8 / 0.75);
+  }
+
+  /* ── Center: the stamped title ── */
+  .center {
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    text-align: center;
+  }
+
+  h1 {
+    margin: 0;
+    font-family: "Bodoni Moda", Didot, serif;
+    font-optical-sizing: auto;
+    font-weight: 900;
+    font-size: clamp(3rem, 11.5vw, 9.5rem);
+    line-height: 0.92;
+    letter-spacing: 0.015em;
+    text-transform: uppercase;
+    color: var(--ink);
+    /* debossed into the leaf */
+    text-shadow:
+      0 1px 0 rgb(255 236 180 / 0.35),
+      0 -1px 1px rgb(0 0 0 / 0.45);
+  }
+  h1 .the {
+    display: block;
+    font-size: 0.22em;
+    font-weight: 400;
+    letter-spacing: 0.55em;
+    margin-bottom: 0.5em;
+    text-indent: 0.55em; /* balance tracking */
+  }
+
+  .lede {
+    margin: 1.4em 0 0;
+    font-style: italic;
+    font-size: clamp(0.95rem, 1.4vw, 1.15rem);
+    color: rgb(36 23 8 / 0.85);
+    max-width: 36ch;
+    transition: opacity 1.2s ease;
+  }
+
+  /* ── Footer: plaque + meter ── */
+  .plate-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 2rem;
+  }
+
+  .plaque {
+    max-width: 44ch;
+    font-size: clamp(0.85rem, 1.3vw, 1.05rem);
+    line-height: 1.55;
+    color: var(--bone);
+    opacity: 0;
+    transition: opacity 1.6s ease;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.7), 0 0 22px rgb(0 0 0 / 0.55);
+  }
+  .plaque em { font-style: italic; }
+  .plaque .attrib {
+    display: block;
+    margin-top: 0.6em;
+    font-family: "Archivo", sans-serif;
+    font-style: normal;
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgb(232 221 200 / 0.6);
+  }
+
+  .meter {
+    text-align: right;
+    font-family: "Archivo", sans-serif;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgb(36 23 8 / 0.8);
+    flex: none;
+  }
+  .meter .bar {
+    width: clamp(110px, 16vw, 220px);
+    height: 2px;
+    margin-top: 0.6em;
+    background: rgb(36 23 8 / 0.25);
+    position: relative;
+  }
+  .meter .bar i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0%;
+    background: var(--ink);
+    transition: width 0.5s ease;
+  }
+
+  /* Finale: once enough leaf is gone, the argument lands. The verdict
+     takes the lede's place, and the ink turns bone: the lettering only
+     ever made sense on gold. */
+  .verdict {
+    position: fixed;
+    left: 50%;
+    top: 66%;
+    transform: translateX(-50%);
+    font-style: italic;
+    font-size: clamp(1rem, 1.8vw, 1.4rem);
+    color: var(--bone);
+    opacity: 0;
+    transition: opacity 2.4s ease 0.8s;
+    pointer-events: none;
+    text-align: center;
+    width: max-content;
+    max-width: 90vw;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.7), 0 0 22px rgb(0 0 0 / 0.55);
+  }
+
+  h1, .era, .back, .meter { transition: color 1.8s ease; }
+  .meter .bar i { transition: width 0.5s ease, background 1.8s ease; }
+
+  body.revealed .plaque { opacity: 1; }
+  body.finale .verdict { opacity: 1; }
+  body.finale .lede { opacity: 0; }
+  body.finale h1 {
+    color: var(--bone);
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+  }
+  body.finale .era, body.finale .back, body.finale .meter { color: var(--bone); }
+  body.finale .back { border-bottom-color: rgb(232 221 200 / 0.5); }
+  body.finale .meter .bar i { background: var(--bone); }
+
+  .fallback {
+    position: fixed;
+    inset: 0;
+    display: none;
+    place-content: center;
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(160deg, #caa14a, #8a6420 70%);
+    color: var(--ink);
+  }
+  body.no-webgl .fallback { display: grid; }
+  body.no-webgl #foil, body.no-webgl #flakes { display: none; }
+
+  @media (max-width: 700px) {
+    .plate-bottom { flex-direction: column; align-items: flex-start; }
+    .meter { text-align: left; }
+    .plaque { max-width: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plaque, .meter .bar i, .verdict, .lede, h1, .era, .back, .meter {
+      transition: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="foil" aria-label="A wall of gold leaf. Press and drag to burnish through the gold to the iron beneath." role="img"></canvas>
+<canvas id="flakes" aria-hidden="true"></canvas>
+
+<div class="stage-copy">
+  <header class="plate-top">
+    <a class="back" href="../../">Catalogue</a>
+    <span class="era">American industry &amp; ornament · 1870&ndash;1900</span>
+  </header>
+
+  <div class="center">
+    <h1><span class="the">The</span>Gilded Age</h1>
+    <p class="lede" id="lede">Take the light across the leaf.<br />Press and drag to burnish through.</p>
+  </div>
+
+  <footer class="plate-bottom">
+    <p class="plaque" id="plaque">
+      <em>&ldquo;What is the chief end of man? &mdash; to get rich. In what way?
+      &mdash; dishonestly if we can; honestly if we must.&rdquo;</em>
+      <span class="attrib">Mark Twain, The Revised Catechism, 1871</span>
+    </p>
+    <div class="meter">
+      <span id="meter-label">Surface removed &middot; 0%</span>
+      <div class="bar"><i id="meter-fill"></i></div>
+    </div>
+  </footer>
+</div>
+
+<p class="verdict">Gilded, not golden. The iron was always underneath.</p>
+
+<div class="fallback">
+  <p>This exhibit needs WebGL2, which this browser has disabled.<br />
+  The piece is a wall of gold leaf you burnish through to the iron beneath.</p>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const foil = document.getElementById("foil");
+  const gl = foil.getContext("webgl2", { antialias: false });
+  if (!gl) { document.body.classList.add("no-webgl"); return; }
+
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const DPR = Math.min(devicePixelRatio || 1, 2);
+
+  /* ── Shaders ─────────────────────────────────────────────── */
+  const VERT = `#version 300 es
+  void main() {
+    vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+  }`;
+
+  const FRAG = `#version 300 es
+  precision highp float;
+  uniform vec2  uRes;
+  uniform float uTime;
+  uniform vec3  uLight;    /* xy in pixels, z = height */
+  uniform sampler2D uDamage;
+  uniform float uMotion;   /* 0 = reduced motion */
+  out vec4 frag;
+
+  float hash21(vec2 p) {
+    p = fract(p * vec2(234.34, 435.345));
+    p += dot(p, p + 34.23);
+    return fract(p.x * p.y);
+  }
+  float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(hash21(i), hash21(i + vec2(1, 0)), u.x),
+      mix(hash21(i + vec2(0, 1)), hash21(i + vec2(1, 1)), u.x), u.y);
+  }
+  float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) {
+      v += a * vnoise(p);
+      p = p * 2.03 + vec2(17.3, 9.1);
+      a *= 0.5;
+    }
+    return v;
+  }
+
+  /* Height of the crinkled leaf at point p (aspect-normalized). */
+  float leafHeight(vec2 p, float cid, float seam) {
+    float crease = abs(fbm(p * 6.0 + cid * 13.0) - 0.5) * 2.0; /* ridged folds */
+    float crinkle = fbm(p * 28.0 + cid * 7.0);
+    float grain = fbm(p * 90.0);
+    return crease * 0.55 + crinkle * 0.3 + grain * 0.15 - (1.0 - seam) * 0.8;
+  }
+
+  void main() {
+    vec2 uv = gl_FragCoord.xy / uRes;
+    vec2 p = gl_FragCoord.xy / uRes.y;
+
+    /* Leaf laid in sheets */
+    float leaf = 0.21;
+    vec2 cell = floor(p / leaf);
+    float cid = hash21(cell);
+    vec2 lp = fract(p / leaf);
+    float e0 = 0.010;
+    float seam = smoothstep(0.0, e0, lp.x) * smoothstep(0.0, e0, lp.y)
+               * smoothstep(0.0, e0, 1.0 - lp.x) * smoothstep(0.0, e0, 1.0 - lp.y);
+
+    /* Normal from height field */
+    float eps = 1.6 / uRes.y;
+    float h  = leafHeight(p, cid, seam);
+    float hx = leafHeight(p + vec2(eps, 0.0), cid, seam);
+    float hy = leafHeight(p + vec2(0.0, eps), cid, seam);
+    vec3 n = normalize(vec3((h - hx) / eps * 0.028, (h - hy) / eps * 0.028, 1.0));
+
+    /* Raking light from the pointer */
+    vec3 lpos = vec3(uLight.xy / uRes.y, uLight.z);
+    vec3 surf = vec3(p, 0.0);
+    vec3 L = normalize(lpos - surf);
+    float dist = length(lpos.xy - p);
+    float atten = 1.0 / (1.0 + dist * dist * 2.4);
+    float diff = max(dot(n, L), 0.0);
+    vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
+    float spec = pow(max(dot(n, H), 0.0), 60.0);
+
+    /* Gold, varying sheet to sheet */
+    vec3 goldA = vec3(0.62, 0.44, 0.13);
+    vec3 goldB = vec3(0.85, 0.64, 0.24);
+    vec3 base = mix(goldA, goldB, cid);
+    base *= 0.9 + 0.25 * fbm(p * 2.2);            /* patina drift */
+    vec3 col = base * (0.2 + 1.05 * diff * atten)
+             + vec3(1.0, 0.9, 0.62) * spec * atten * 1.15;
+    col *= mix(0.5, 1.0, seam);                    /* dark seams */
+
+    /* Burnished-through damage. The soft painted mask is re-thresholded
+       against high-frequency noise so the leaf tears ragged, not airbrushed. */
+    float d = texture(uDamage, vec2(uv.x, 1.0 - uv.y)).r;
+    float rag = (fbm(p * 46.0) - 0.5) * 0.42;
+    float tear = smoothstep(0.30, 0.40, d + rag);
+    float rim = smoothstep(0.24, 0.33, d + rag) * (1.0 - smoothstep(0.36, 0.52, d + rag));
+
+    float soot = fbm(p * 9.0);
+    vec3 iron = mix(vec3(0.030, 0.024, 0.020), vec3(0.095, 0.075, 0.060), soot);
+    /* faint riveted plate seams in the iron */
+    float plate = smoothstep(0.0, 0.02, abs(fract(p.y * 3.4) - 0.5) - 0.012);
+    iron *= mix(0.55, 1.0, plate);
+    iron *= 0.45 + 0.75 * diff * atten;            /* iron catches a little light */
+
+    col = mix(col, iron, tear);
+    col += vec3(0.42, 0.19, 0.08) * rim;           /* curled, scorched tear edge */
+    col += vec3(1.0, 0.85, 0.5) * rim * spec * atten * 2.0; /* edge catches light */
+
+    /* Vignette + grain */
+    float vig = smoothstep(1.25, 0.35, length(uv - 0.5) * 1.6);
+    col *= 0.55 + 0.45 * vig;
+    float g = hash21(gl_FragCoord.xy + fract(uTime) * 61.7 * uMotion);
+    col += (g - 0.5) * 0.028;
+
+    frag = vec4(pow(max(col, 0.0), vec3(0.4545)), 1.0);
+  }`;
+
+  function compile(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+      throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+    throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+
+  const U = (name) => gl.getUniformLocation(prog, name);
+  const uRes = U("uRes"), uTime = U("uTime"), uLight = U("uLight"),
+        uDamage = U("uDamage"), uMotion = U("uMotion");
+  gl.uniform1f(uMotion, reduceMotion ? 0 : 1);
+
+  /* ── Damage mask: a 2D canvas painted with the pointer ───── */
+  const mask = document.createElement("canvas");
+  const mctx = mask.getContext("2d", { willReadFrequently: false });
+  const tex = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.uniform1i(uDamage, 0);
+  let maskDirty = true;
+
+  /* ── Flake debris layer ──────────────────────────────────── */
+  const flakesCanvas = document.getElementById("flakes");
+  const fctx = flakesCanvas.getContext("2d");
+  const flakes = [];
+  const GOLDS = ["#d9a850", "#b98a33", "#8a6420", "#e9c979"];
+
+  function spawnFlakes(x, y, n) {
+    if (reduceMotion) return;
+    for (let i = 0; i < n && flakes.length < 420; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = 40 + Math.random() * 220;
+      flakes.push({
+        x, y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 120,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 9,
+        w: 2 + Math.random() * 6,
+        h: 1.5 + Math.random() * 4,
+        life: 0.9 + Math.random() * 0.9,
+        t: 0,
+        c: GOLDS[(Math.random() * GOLDS.length) | 0],
+      });
+    }
+  }
+
+  /* ── Pointer: light + burnishing ─────────────────────────── */
+  const light = { x: innerWidth * 0.62, y: innerHeight * 0.3 };
+  const target = { x: light.x, y: light.y };
+  let pressing = false;
+  let lastActive = 0;
+  let lastPaint = null;
+
+  function paint(x, y) {
+    const mx = (x / innerWidth) * mask.width;
+    const my = (y / innerHeight) * mask.height;
+    const r = mask.width * 0.035;
+    const grd = mctx.createRadialGradient(mx, my, 0, mx, my, r);
+    grd.addColorStop(0, "rgba(255,255,255,0.5)");
+    grd.addColorStop(1, "rgba(255,255,255,0)");
+    mctx.fillStyle = grd;
+    mctx.beginPath();
+    mctx.arc(mx, my, r, 0, Math.PI * 2);
+    mctx.fill();
+    maskDirty = true;
+    if (!lastPaint || Math.hypot(x - lastPaint.x, y - lastPaint.y) > 14) {
+      spawnFlakes(x, y, 7);
+      lastPaint = { x, y };
+    }
+  }
+
+  foil.addEventListener("pointerdown", (e) => {
+    pressing = true;
+    foil.setPointerCapture(e.pointerId);
+    paint(e.clientX, e.clientY);
+  });
+  foil.addEventListener("pointermove", (e) => {
+    target.x = e.clientX;
+    target.y = e.clientY;
+    lastActive = performance.now();
+    if (pressing) paint(e.clientX, e.clientY);
+  });
+  foil.addEventListener("pointerup", () => { pressing = false; lastPaint = null; });
+  foil.addEventListener("pointercancel", () => { pressing = false; lastPaint = null; });
+
+  /* ── Reveal accounting ───────────────────────────────────── */
+  const probe = document.createElement("canvas");
+  probe.width = 48; probe.height = 27;
+  const pctx = probe.getContext("2d", { willReadFrequently: true });
+  const meterLabel = document.getElementById("meter-label");
+  const meterFill = document.getElementById("meter-fill");
+  let reveal = 0;
+
+  setInterval(() => {
+    if (!maskDirty && reveal > 0) return;
+    pctx.drawImage(mask, 0, 0, probe.width, probe.height);
+    const px = pctx.getImageData(0, 0, probe.width, probe.height).data;
+    let torn = 0;
+    for (let i = 0; i < px.length; i += 4) if (px[i] > 88) torn++;
+    reveal = torn / (px.length / 4);
+    const pct = Math.round(reveal * 100);
+    meterLabel.textContent = `Surface removed · ${pct}%`;
+    meterFill.style.width = `${pct}%`;
+    if (reveal > 0.05) document.body.classList.add("revealed");
+    if (reveal > 0.45) document.body.classList.add("finale");
+  }, 500);
+
+  /* ── Sizing ──────────────────────────────────────────────── */
+  function resize() {
+    foil.width = innerWidth * DPR;
+    foil.height = innerHeight * DPR;
+    flakesCanvas.width = innerWidth * DPR;
+    flakesCanvas.height = innerHeight * DPR;
+    fctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    /* Preserve damage across resize */
+    const keep = mask.width ? mask : null;
+    const old = keep && document.createElement("canvas");
+    if (keep) {
+      old.width = mask.width; old.height = mask.height;
+      old.getContext("2d").drawImage(mask, 0, 0);
+    }
+    mask.width = Math.round(innerWidth / 2);
+    mask.height = Math.round(innerHeight / 2);
+    mctx.fillStyle = "#000";
+    mctx.fillRect(0, 0, mask.width, mask.height);
+    if (keep) mctx.drawImage(old, 0, 0, mask.width, mask.height);
+    maskDirty = true;
+    gl.viewport(0, 0, foil.width, foil.height);
+  }
+  addEventListener("resize", resize);
+  resize();
+
+  /* ── Frame loop ──────────────────────────────────────────── */
+  function frame(tms) {
+    const t = tms / 1000;
+
+    /* Idle: the light strolls the room */
+    if (!reduceMotion && tms - lastActive > 3500) {
+      target.x = innerWidth * (0.5 + 0.36 * Math.cos(t * 0.21));
+      target.y = innerHeight * (0.42 + 0.3 * Math.sin(t * 0.16));
+    }
+    light.x += (target.x - light.x) * 0.07;
+    light.y += (target.y - light.y) * 0.07;
+
+    if (maskDirty) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, gl.LUMINANCE,
+                    gl.UNSIGNED_BYTE, mask);
+      maskDirty = false;
+    }
+
+    gl.uniform2f(uRes, foil.width, foil.height);
+    gl.uniform1f(uTime, t);
+    gl.uniform3f(uLight, light.x * DPR, (innerHeight - light.y) * DPR, 0.55);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    /* Flakes + burnisher cursor */
+    fctx.clearRect(0, 0, innerWidth, innerHeight);
+    const dt = 1 / 60;
+    for (let i = flakes.length - 1; i >= 0; i--) {
+      const f = flakes[i];
+      f.t += dt;
+      if (f.t > f.life) { flakes.splice(i, 1); continue; }
+      f.vy += 780 * dt;
+      f.vx *= 0.985;
+      f.x += f.vx * dt;
+      f.y += f.vy * dt;
+      f.rot += f.vr * dt;
+      fctx.save();
+      fctx.translate(f.x, f.y);
+      fctx.rotate(f.rot);
+      fctx.globalAlpha = 1 - f.t / f.life;
+      fctx.fillStyle = f.c;
+      fctx.fillRect(-f.w / 2, -f.h / 2, f.w, f.h);
+      fctx.restore();
+    }
+    if (matchMedia("(pointer: fine)").matches) {
+      fctx.beginPath();
+      fctx.arc(light.x, light.y, pressing ? 14 : 9, 0, Math.PI * 2);
+      fctx.strokeStyle = pressing ? "rgba(36,23,8,0.9)" : "rgba(36,23,8,0.55)";
+      fctx.lineWidth = 1.5;
+      fctx.stroke();
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
