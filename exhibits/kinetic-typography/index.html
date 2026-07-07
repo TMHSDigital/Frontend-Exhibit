@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KINETIC // Scroll-Reactive Typography</title>
+<meta name="description" content="A scroll-driven typographic kinetic layout where text warps, shears, and scales based on scroll acceleration." />
+<meta name="theme-color" content="#070707" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23070707'/%3E%3Ctext x='16' y='24' text-anchor='middle' font-family='monospace' font-size='22' font-weight='bold' fill='%23d8ff3e'%3EK%3C/text%3E%3C/svg%3E" />
+
+<!-- Variable fonts: axes are driven live by scroll velocity -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,slnt,wdth,wght,GRAD@8..144,-10..0,25..151,100..1000,-200..150&family=Fraunces:opsz,wght@9..144,300..900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+<!-- Smooth-scroll + animation utilities via public CDNs -->
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<style>
+:root{
+  /* Live kinetic channels, written every frame by the engine */
+  --v: 0;        /* signed normalized velocity  -1 .. 1 */
+  --speed: 0;    /* absolute speed               0 .. 1 */
+  --acc: 0;      /* acceleration magnitude       0 .. 1 */
+  --dir: 1;      /* scroll direction            -1 or 1 */
+  --progress: 0; /* page scroll progress         0 .. 1 */
+
+  --bg: #070707;
+  --ink: #f4f1ea;
+  --muted: #8a857b;
+  --accent: #d8ff3e;      /* acid lime */
+  --aberr-a: #ff2f6d;     /* magenta split */
+  --aberr-b: #35f0ff;     /* cyan split */
+  --line: rgba(244,241,234,0.10);
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+
+html{
+  background:var(--bg);
+  scrollbar-width:thin;
+  scrollbar-color:rgba(216,255,62,0.35) #0d0d0d;
+}
+::-webkit-scrollbar{ width:8px; }
+::-webkit-scrollbar-track{ background:#0d0d0d; }
+::-webkit-scrollbar-thumb{ background:rgba(216,255,62,0.3); border-radius:4px; }
+::-webkit-scrollbar-thumb:hover{ background:rgba(216,255,62,0.55); }
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Roboto Flex", system-ui, sans-serif;
+  font-variation-settings:"wght" 380, "wdth" 100, "slnt" 0;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  cursor:default;
+}
+
+/* Grain + vignette atmosphere */
+body::before{
+  content:"";
+  position:fixed; inset:0; z-index:2; pointer-events:none;
+  background:
+    radial-gradient(120% 120% at 50% 0%, transparent 55%, rgba(0,0,0,0.55) 100%),
+    radial-gradient(100% 100% at 50% 120%, rgba(216,255,62,0.05), transparent 60%);
+}
+body::after{
+  content:"";
+  position:fixed; inset:-50%; z-index:3; pointer-events:none;
+  opacity:0.05; mix-blend-mode:screen;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:grain 6s steps(6) infinite;
+}
+@keyframes grain{
+  0%{transform:translate(0,0)} 20%{transform:translate(-4%,3%)}
+  40%{transform:translate(3%,-5%)} 60%{transform:translate(-3%,4%)}
+  80%{transform:translate(5%,2%)} 100%{transform:translate(0,0)}
+}
+
+/* ---------- Fixed instrument frame ---------- */
+.frame{ position:fixed; inset:0; z-index:20; pointer-events:none; }
+.frame .bar{
+  position:absolute; left:0; right:0;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:18px 26px;
+  font-family:"Space Mono", monospace; font-size:11px; letter-spacing:0.18em;
+  text-transform:uppercase; color:var(--muted);
+}
+.frame .bar.top{
+  top:0;
+  background:linear-gradient(to bottom, rgba(7,7,7,0.9), transparent);
+}
+.frame .bar.bottom{
+  bottom:0;
+  background:linear-gradient(to top, rgba(7,7,7,0.9), transparent);
+}
+.frame .bar .dot{ color:var(--accent); }
+
+.progressbar{
+  position:absolute; left:0; top:0; height:2px;
+  width:calc(var(--progress) * 100%);
+  background:linear-gradient(90deg, var(--aberr-b), var(--accent), var(--aberr-a));
+  box-shadow:0 0 18px rgba(216,255,62,0.5);
+}
+
+/* Velocity meter (bottom-left readout) */
+.hud{ display:flex; gap:22px; align-items:center; }
+.hud .meter{
+  width:120px; height:6px; border:1px solid var(--line); position:relative; overflow:hidden;
+}
+.hud .meter i{
+  position:absolute; top:0; bottom:0; left:50%;
+  width:calc(var(--speed) * 50%);
+  background:var(--accent);
+  /* min(--dir, 0) is -1 scrolling up, 0 scrolling down: fill flips sides */
+  transform:translateX(calc(min(var(--dir), 0) * 100%));
+}
+
+/* ---------- Layout scaffolding ---------- */
+main{ position:relative; z-index:5; }
+section{
+  min-height:100vh;
+  display:flex; flex-direction:column; justify-content:center;
+  padding:12vh 6vw;
+  position:relative;
+}
+.eyebrow{
+  font-family:"Space Mono", monospace; font-size:12px; letter-spacing:0.4em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:2.2rem;
+}
+
+/* Kinetic type primitive: reads the live channels */
+.kinetic{
+  will-change:transform, font-variation-settings, text-shadow;
+  transform:
+    skewY(calc(var(--v) * -5deg))
+    scaleY(calc(1 + var(--speed) * 0.16));
+  font-variation-settings:
+    "wght" calc(360 + var(--speed) * 560),
+    "wdth" calc(100 + var(--speed) * 30),
+    "slnt" calc(var(--v) * -10);
+  text-shadow:
+    calc(var(--acc) * 10px) 0 var(--aberr-a),
+    calc(var(--acc) * -10px) 0 var(--aberr-b);
+}
+
+/* ---------- Hero ---------- */
+.hero h1{
+  font-family:"Roboto Flex", sans-serif;
+  font-size:clamp(4rem, 20vw, 20rem);
+  line-height:0.82;
+  letter-spacing:-0.03em;
+  text-transform:uppercase;
+}
+.hero h1 .l2{ color:var(--accent); }
+.hero .sub{
+  margin-top:2.5rem; max-width:44ch;
+  font-size:clamp(1rem, 1.5vw, 1.35rem);
+  color:var(--muted); line-height:1.5;
+}
+
+/* ---------- Manifesto ---------- */
+.manifesto .line{
+  font-family:"Fraunces", serif;
+  font-size:clamp(2.2rem, 8vw, 8rem);
+  line-height:0.98; letter-spacing:-0.02em; margin:0.1em 0;
+}
+.manifesto .line em{ font-style:italic; color:var(--accent); }
+
+/* ---------- Marquee band ---------- */
+.band{ min-height:60vh; justify-content:center; overflow:hidden; gap:0.1em; }
+.marquee{
+  display:flex; white-space:nowrap; will-change:transform;
+  font-family:"Roboto Flex", sans-serif; font-weight:800;
+  font-size:clamp(3rem, 12vw, 12rem);
+  text-transform:uppercase; letter-spacing:-0.02em;
+}
+.marquee span{
+  padding:0 0.25em;
+  /* the band stretches wider the faster you scroll */
+  font-variation-settings:"wght" 800, "wdth" calc(100 + var(--speed) * 51);
+}
+.marquee .hollow{
+  color:transparent; -webkit-text-stroke:1.5px var(--ink);
+}
+
+/* ---------- Specimen ---------- */
+.specimen{ align-items:center; text-align:center; }
+.specimen .glyph{
+  font-family:"Fraunces", serif;
+  font-size:clamp(9rem, 42vw, 42rem);
+  line-height:1; color:var(--accent);
+}
+
+/* ---------- Grid ---------- */
+.grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:1px; background:var(--line); }
+.grid .cell{
+  background:var(--bg); padding:8% 6%; min-height:34vh;
+  display:flex; flex-direction:column; justify-content:space-between;
+}
+.grid .cell .k{ font-family:"Space Mono", monospace; font-size:11px; color:var(--muted); letter-spacing:0.2em; }
+.grid .cell .big{
+  font-family:"Roboto Flex", sans-serif; font-size:clamp(2rem, 5vw, 4.5rem);
+  line-height:0.9; text-transform:uppercase;
+}
+
+/* Each cell demos its own channel on hover: the label is the control */
+.grid .cell .big{ transition:transform .5s var(--ease), font-variation-settings .5s var(--ease), text-shadow .5s var(--ease), color .5s var(--ease); }
+.grid .cell:hover .big{ color:var(--accent); }
+.grid .cell[data-axis="wght"]:hover .big{ font-variation-settings:"wght" 1000; }
+.grid .cell[data-axis="wdth"]:hover .big{ font-variation-settings:"wdth" 151; }
+.grid .cell[data-axis="slnt"]:hover .big{ font-variation-settings:"slnt" -10; }
+.grid .cell[data-axis="skew"]:hover .big{ transform:skewY(-8deg); }
+.grid .cell[data-axis="scale"]:hover .big{ transform:scaleY(1.45); transform-origin:bottom left; }
+.grid .cell[data-axis="rgb"]:hover .big{
+  text-shadow:8px 0 var(--aberr-a), -8px 0 var(--aberr-b);
+}
+
+/* ---------- Outro ---------- */
+.outro{ align-items:center; text-align:center; }
+.outro h2{
+  font-family:"Roboto Flex", sans-serif; text-transform:uppercase;
+  font-size:clamp(3rem, 14vw, 14rem); line-height:0.85; letter-spacing:-0.03em;
+}
+.outro .credit{ margin-top:3rem; font-family:"Space Mono", monospace; font-size:12px; color:var(--muted); letter-spacing:0.2em; }
+
+/* ---------- Pass 1: char splitting + reveals ---------- */
+[data-split]{ overflow:hidden; padding-bottom:0.14em; }
+[data-split].revealed{ overflow:visible; } /* clip only during entry; free the wave after */
+.ch{ display:inline-block; will-change:transform, opacity; }
+.chi{ display:inline-block; will-change:transform; }
+.ch.space{ width:0.28em; }
+
+/* ---------- Pass 2: motion blur, cursor ---------- */
+.kinetic{ filter:blur(calc(var(--speed) * 1.1px)); }
+
+.cursor{
+  position:fixed; top:0; left:0; z-index:40; pointer-events:none;
+  width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+  border:1px solid var(--accent);
+  mix-blend-mode:difference;
+  opacity:0;
+  transition:width .25s var(--ease), height .25s var(--ease), opacity .35s var(--ease);
+}
+body.pointer-in .cursor{ opacity:1; }
+.cursor::after{
+  content:""; position:absolute; inset:-1px; border-radius:50%;
+  border:1px solid var(--accent); opacity:0.4;
+  transform:scale(calc(1 + var(--speed) * 2.4));
+}
+@media (hover:none){ .cursor{ display:none; } }
+
+.specimen .glyph{ will-change:transform; }
+
+/* ---------- Pass 3: accent flash + reduced motion ---------- */
+.flash{
+  position:fixed; inset:0; z-index:1; pointer-events:none; opacity:0;
+  background:radial-gradient(80% 70% at 50% 50%, rgba(216,255,62,0.16), transparent 70%);
+  mix-blend-mode:screen;
+}
+@media (prefers-reduced-motion: reduce){
+  .kinetic{ filter:none !important; text-shadow:none !important; transform:none !important; }
+  .cursor{ display:none; }
+  body::after{ animation:none; }
+  .flash{ display:none; }
+  .grid .cell .big{ transition:none; }
+  .marquee span{ font-variation-settings:"wght" 800, "wdth" 100; }
+}
+
+@media (max-width:720px){
+  .grid{ grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="flash" id="flash"></div>
+<div class="cursor" id="cursor"></div>
+
+<div class="frame">
+  <div class="progressbar"></div>
+  <div class="bar top">
+    <span>EXHIBIT_002 <span class="dot">/</span> KINETIC-TYPOGRAPHY</span>
+    <span>SCROLL-REACTIVE TYPE ENGINE</span>
+  </div>
+  <div class="bar bottom">
+    <div class="hud">
+      <span>VEL</span>
+      <div class="meter"><i></i></div>
+      <span id="velReadout">0.00</span>
+    </div>
+    <span id="progReadout">000 / 100</span>
+  </div>
+</div>
+
+<main>
+  <section class="hero">
+    <div class="eyebrow">Typographic Kinetics &mdash; Est. Velocity</div>
+    <h1 class="kinetic">Kinetic<br /><span class="l2">Type</span></h1>
+    <p class="sub">Scroll to feed the engine. Every character reads your scroll velocity and acceleration, then warps, shears, and scales in response. The faster you move, the more the letterforms distort.</p>
+  </section>
+
+  <section class="manifesto">
+    <div class="eyebrow">Manifesto</div>
+    <div class="line kinetic" data-split>Motion is a <em>material</em>.</div>
+    <div class="line kinetic" data-split>Speed becomes <em>weight</em>.</div>
+    <div class="line kinetic" data-split>Direction becomes <em>form</em>.</div>
+  </section>
+
+  <section class="band">
+    <div class="marquee" data-speed="1">
+      <span>Warp</span><span class="hollow">Shear</span><span>Scale</span><span class="hollow">Stretch</span>
+      <span>Warp</span><span class="hollow">Shear</span><span>Scale</span><span class="hollow">Stretch</span>
+    </div>
+  </section>
+
+  <section class="specimen">
+    <div class="eyebrow">Specimen &mdash; Variable Axis</div>
+    <div class="glyph kinetic">&amp;</div>
+  </section>
+
+  <section class="grid-wrap">
+    <div class="grid">
+      <div class="cell" data-axis="wght"><span class="k">01 / WGHT</span><span class="big kinetic">Weight</span></div>
+      <div class="cell" data-axis="wdth"><span class="k">02 / WDTH</span><span class="big kinetic">Width</span></div>
+      <div class="cell" data-axis="slnt"><span class="k">03 / SLNT</span><span class="big kinetic">Slant</span></div>
+      <div class="cell" data-axis="skew"><span class="k">04 / SKEW</span><span class="big kinetic">Shear</span></div>
+      <div class="cell" data-axis="scale"><span class="k">05 / SCALE</span><span class="big kinetic">Stretch</span></div>
+      <div class="cell" data-axis="rgb"><span class="k">06 / RGB</span><span class="big kinetic">Split</span></div>
+    </div>
+  </section>
+
+  <section class="outro">
+    <div class="eyebrow">End of Transmission</div>
+    <h2 class="kinetic" data-split>Velocity<br />is Voice</h2>
+    <div class="credit">BUILT AS AN AUTONOMOUS FRONTEND EXHIBIT</div>
+  </section>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  const root = document.documentElement;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---- Tunables ----
+  const MAX_V = 42;   // velocity that maps to full distortion
+  const MAX_A = 9;    // acceleration that maps to full aberration
+  const LERP  = 0.12; // display smoothing
+
+  const state = { rawV:0, prevRawV:0, dispV:0, dispSpeed:0, dispAcc:0, dir:1, progress:0 };
+
+  // ---- Smooth scroll (Lenis) with native fallback ----
+  let lenis = null;
+  if(window.Lenis && !reduce){
+    lenis = new Lenis({ lerp:0.1, wheelMultiplier:1, smoothWheel:true });
+    lenis.on("scroll", (e)=>{
+      state.rawV = e.velocity || 0;
+      state.dir = state.rawV === 0 ? state.dir : (state.rawV > 0 ? 1 : -1);
+      state.progress = e.progress || 0;
+    });
+    const rafL = (t)=>{ lenis.raf(t); requestAnimationFrame(rafL); };
+    requestAnimationFrame(rafL);
+  } else {
+    let last = window.scrollY, lastT = performance.now();
+    window.addEventListener("scroll", ()=>{
+      const now = performance.now(), y = window.scrollY;
+      const dt = Math.max(1, now - lastT);
+      state.rawV = (y - last) / dt * 16;
+      state.dir = state.rawV >= 0 ? 1 : -1;
+      const max = document.body.scrollHeight - window.innerHeight;
+      state.progress = max > 0 ? y / max : 0;
+      last = y; lastT = now;
+    }, { passive:true });
+  }
+
+  // ---- Pass 1 + 2: split headings into outer (reveal) + inner (wave) spans ----
+  const waveChars = []; // { inner, i } collected across all split targets
+
+  function splitChars(el){
+    const outers = [];
+    const walk = (node)=>{
+      Array.from(node.childNodes).forEach((n)=>{
+        if(n.nodeType === 3){ // text
+          n.textContent.split("").forEach((c)=>{
+            const outer = document.createElement("span");
+            const inner = document.createElement("span");
+            inner.className = "chi";
+            if(c === " "){ outer.className = "ch space"; inner.innerHTML = "&nbsp;"; }
+            else { outer.className = "ch"; inner.textContent = c; }
+            outer.appendChild(inner);
+            n.parentNode.insertBefore(outer, n);
+            outers.push(outer);
+            waveChars.push({ inner, i: waveChars.length });
+          });
+          n.remove();
+        } else if(n.nodeName === "BR"){
+          // keep line breaks intact
+        } else if(n.nodeType === 1){
+          walk(n);
+        }
+      });
+    };
+    walk(el);
+    return outers;
+  }
+
+  const splitTargets = Array.from(document.querySelectorAll("[data-split]"));
+  splitTargets.forEach((el)=>{
+    const chars = splitChars(el);
+    if(window.gsap && !reduce){
+      gsap.set(chars, { yPercent:120, opacity:0, rotateZ:5 });
+      const play = ()=>gsap.to(chars, {
+        yPercent:0, opacity:1, rotateZ:0,
+        duration:1, ease:"expo.out", stagger:0.028, overwrite:true,
+        onComplete:()=>el.classList.add("revealed")
+      });
+      if(window.ScrollTrigger){
+        gsap.registerPlugin(ScrollTrigger);
+        ScrollTrigger.create({ trigger:el, start:"top 82%", once:true, onEnter:play });
+      } else { play(); }
+    }
+  });
+
+  // ---- Pass 2: pinned specimen that scrubs scale + rotation ----
+  if(window.gsap && window.ScrollTrigger && !reduce){
+    gsap.registerPlugin(ScrollTrigger);
+    if(lenis) lenis.on("scroll", ScrollTrigger.update);
+    const glyph = document.querySelector(".specimen .glyph");
+    if(glyph){
+      gsap.fromTo(glyph, { scale:0.55, rotate:-8, letterSpacing:"0.1em" }, {
+        scale:1.35, rotate:10, letterSpacing:"-0.02em", ease:"none",
+        scrollTrigger:{ trigger:".specimen", start:"top top", end:"+=130%", pin:true, scrub:1 }
+      });
+    }
+  }
+
+  // ---- Pass 2: custom velocity cursor ----
+  const cursor = document.getElementById("cursor");
+  const cur = { x:innerWidth/2, y:innerHeight/2, tx:innerWidth/2, ty:innerHeight/2 };
+  if(cursor && !reduce){
+    window.addEventListener("mousemove", (e)=>{
+      cur.tx = e.clientX; cur.ty = e.clientY;
+      document.body.classList.add("pointer-in");
+    }, { passive:true });
+    document.documentElement.addEventListener("mouseleave", ()=>document.body.classList.remove("pointer-in"));
+  }
+
+  // ---- Pass 3: entrance timeline, font reflow, visibility guard ----
+  const flash = document.getElementById("flash");
+  const DISTORT = reduce ? 0.12 : 1; // damp all distortion for reduced motion
+
+  if(window.gsap && !reduce){
+    const tl = gsap.timeline({ defaults:{ ease:"expo.out" } });
+    tl.from(".hero .eyebrow", { y:20, opacity:0, duration:0.8 })
+      .from(".hero h1", { yPercent:14, opacity:0, filter:"blur(16px)", duration:1.25 }, "-=0.4")
+      .from(".hero .sub", { y:22, opacity:0, duration:0.95 }, "-=0.75");
+  }
+
+  // Recompute pinned/triggered positions once the variable fonts settle
+  if(document.fonts && document.fonts.ready && window.ScrollTrigger){
+    document.fonts.ready.then(()=>{ ScrollTrigger.refresh(); });
+  }
+  window.addEventListener("load", ()=>{ if(window.ScrollTrigger) ScrollTrigger.refresh(); });
+
+  // Pause the render loop while the tab is hidden
+  let running = true;
+  document.addEventListener("visibilitychange", ()=>{
+    const wasStopped = !running;
+    running = !document.hidden;
+    if(running && wasStopped) requestAnimationFrame(render);
+  });
+
+  // ---- Pass 1: velocity-reactive infinite marquee ----
+  const marquees = Array.from(document.querySelectorAll(".marquee")).map((el)=>({
+    el, pos:0, half:el.scrollWidth / 2,
+    base:(parseFloat(el.dataset.speed) || 1) * 0.6
+  }));
+  const measureMarquees = ()=>marquees.forEach((m)=>{ m.half = m.el.scrollWidth / 2; });
+  window.addEventListener("resize", measureMarquees);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(measureMarquees);
+
+  // ---- Render loop: eases channels and writes CSS vars ----
+  const clamp = (n,a,b)=>Math.min(b,Math.max(a,n));
+  const velEl = document.getElementById("velReadout");
+  const progEl = document.getElementById("progReadout");
+  let wavePhase = 0;
+  let waveSettled = false;
+
+  function render(){
+    if(!running) return;
+    // acceleration from change in raw velocity
+    const accRaw = Math.abs(state.rawV - state.prevRawV);
+    state.prevRawV = state.rawV;
+
+    const targetV = clamp(state.rawV / MAX_V, -1, 1);
+    const targetAcc = clamp(accRaw / MAX_A, 0, 1);
+
+    state.dispV     += (targetV - state.dispV) * LERP;
+    state.dispSpeed += (Math.abs(targetV) - state.dispSpeed) * LERP;
+    state.dispAcc   += (targetAcc - state.dispAcc) * (LERP * 1.6);
+
+    // velocity naturally decays toward 0 when Lenis stops firing
+    state.rawV *= 0.92;
+
+    root.style.setProperty("--v", (state.dispV * DISTORT).toFixed(4));
+    root.style.setProperty("--speed", (state.dispSpeed * DISTORT).toFixed(4));
+    root.style.setProperty("--acc", (state.dispAcc * DISTORT).toFixed(4));
+    root.style.setProperty("--dir", state.dir);
+    root.style.setProperty("--progress", state.progress.toFixed(4));
+
+    if(flash) flash.style.opacity = (state.dispAcc * 0.08).toFixed(3);
+
+    if(velEl) velEl.textContent = (state.dispV * 100).toFixed(0).padStart(3, "0");
+    if(progEl) progEl.textContent = (state.progress * 100).toFixed(0).padStart(3, "0") + " / 100";
+
+    // Pass 2: per-character traveling wave, amplitude scaled by scroll speed
+    wavePhase += 0.12 + state.dispSpeed * 0.7;
+    const amp = state.dispSpeed * 26;
+    const waveOn = !reduce && amp > 0.15;
+    if(waveOn){
+      for(let k=0; k<waveChars.length; k++){
+        const wc = waveChars[k];
+        const off = Math.sin(wavePhase - wc.i * 0.32) * amp;
+        wc.inner.style.transform = "translateY(" + off.toFixed(2) + "px) rotate(" + (off * 0.18).toFixed(2) + "deg)";
+      }
+      waveSettled = false;
+    } else if(!waveSettled){
+      for(let k=0; k<waveChars.length; k++) waveChars[k].inner.style.transform = "";
+      waveSettled = true;
+    }
+
+    // Pass 2: cursor easing + velocity scaling
+    if(cursor){
+      cur.x += (cur.tx - cur.x) * 0.18;
+      cur.y += (cur.ty - cur.y) * 0.18;
+      cursor.style.transform = "translate3d(" + cur.x.toFixed(1) + "px," + cur.y.toFixed(1) + "px,0)";
+    }
+
+    // Marquee: base drift, accelerated and steered by scroll velocity
+    marquees.forEach((m)=>{
+      m.pos -= m.base + state.dispSpeed * 26;
+      m.pos += state.dispV * 22; // scroll direction pushes the band
+      if(m.half > 0){
+        if(m.pos <= -m.half) m.pos += m.half;
+        if(m.pos > 0) m.pos -= m.half;
+      }
+      m.el.style.transform = "translate3d(" + m.pos.toFixed(2) + "px,0,0)";
+    });
+
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

@@ -66,6 +66,18 @@
       "createdAt": "2026-07-07",
       "dependencies": [],
       "accentColor": "#d9a850"
+    },
+    {
+      "slug": "kinetic-typography",
+      "title": "Kinetic Type",
+      "description": "A scroll-reactive type engine. Text warps, shears, and scales with scroll velocity and acceleration: variable font axes driven live, RGB split on acceleration, per-character traveling wave, velocity-reactive marquee, pinned scrubbed specimen.",
+      "entry": "exhibits/kinetic-typography/index.html",
+      "tags": ["typography", "scroll", "animation", "micro-interactions"],
+      "status": "live",
+      "author": "claude",
+      "createdAt": "2026-07-07",
+      "dependencies": ["lenis@1.1.14", "gsap@3.12.5"],
+      "accentColor": "#d8ff3e"
     }
   ]
 }

@@ -19,8 +19,9 @@ A public showcase of isolated frontend mini-projects: themes, micro-interactions
 | No. | Exhibit | Focus | Technology | Interaction |
 | :-- | :--- | :--- | :--- | :--- |
 | 001 | [The Gilded Age](exhibits/gilded-age/) | Procedural gold leaf material under a raking light, built around Twain's "thin gold over iron" coinage | WebGL2 fragment shader (fbm height field, normal-mapped specular lighting, noise-thresholded damage mask), 2D canvas particle debris, no libraries | Move the pointer to rake light across the leaf. Press and drag to burnish through to the iron beneath. Removing enough surface triggers the finale. |
+| 002 | [Kinetic Type](exhibits/kinetic-typography/) | Scroll-reactive typography: motion treated as a typographic material, with letterforms shaped by how the reader scrolls | Vanilla JS scroll-velocity engine writing CSS custom properties, Lenis smooth scroll, GSAP + ScrollTrigger, Google variable fonts (Roboto Flex, Fraunces, Space Mono), all via CDN | Scroll to feed the engine. Velocity drives weight, width, and slant axes plus shear and scale; acceleration triggers RGB split; a marquee and pinned specimen react to speed and direction. |
 
-Live at [`/#/gilded-age`](https://tmhsdigital.github.io/Frontend-Exhibit/#/gilded-age) once GitHub Pages is enabled.
+Exhibits are live at `https://tmhsdigital.github.io/Frontend-Exhibit/#/<slug>` once GitHub Pages is enabled.
 
 ## The exhibit registry
 
