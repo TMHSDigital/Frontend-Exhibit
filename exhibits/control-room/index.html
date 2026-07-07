@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Control Room</title>
+<meta name="description" content="A brutalist dashboard where the page measures itself. Every numeral's font weight is its own live value. Vanilla JS, no libraries." />
+<meta name="theme-color" content="#cdcac2" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23cdcac2'/%3E%3Crect x='6' y='6' width='20' height='20' fill='none' stroke='%23111110' stroke-width='4'/%3E%3C/svg%3E" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Fragment+Mono&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --concrete: #cdcac2;
+    --concrete-deep: #b9b5ab;
+    --ink: #111110;
+    --klein: #1a2fd6;
+    --bone: #f0eee7;
+    --rule: 3px;
+  }
+
+  /* Master inversion: the whole room flips in one frame, no easing */
+  html.inverted {
+    --concrete: #111110;
+    --concrete-deep: #1c1c1a;
+    --ink: #f0eee7;
+    --bone: #111110;
+    --klein: #3d52ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scrollbar-width: thin; scrollbar-color: var(--ink) var(--concrete-deep); }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: var(--concrete-deep); }
+  ::-webkit-scrollbar-thumb { background: var(--ink); }
+
+  body {
+    background: var(--concrete);
+    color: var(--ink);
+    font-family: "Archivo", system-ui, sans-serif;
+    font-variation-settings: "wght" 460, "wdth" 100;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono {
+    font-family: "Fragment Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* ── The room ─────────────────────────────────────────── */
+  .room {
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    border: var(--rule) solid var(--ink);
+    border-bottom: none;
+  }
+
+  /* Masthead: the room announces itself, weight breathes with load */
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 24px;
+    padding: 28px 32px 20px;
+    border-bottom: var(--rule) solid var(--ink);
+  }
+
+  h1 {
+    font-size: clamp(3.4rem, 11.5vw, 10.5rem);
+    line-height: 0.86;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+    font-variation-settings: "wght" 300, "wdth" 78;
+    will-change: font-variation-settings;
+  }
+
+  .masthead-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 14px;
+    padding-bottom: 8px;
+  }
+
+  .masthead-side p { text-align: right; max-width: 26ch; line-height: 1.7; }
+
+  /* The master rocker: one input, one output, instant */
+  .rocker {
+    display: inline-flex;
+    align-items: stretch;
+    border: var(--rule) solid var(--ink);
+    background: var(--concrete);
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    padding: 0;
+  }
+  .rocker span {
+    padding: 10px 18px;
+    font-family: "Fragment Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+  }
+  .rocker .on { background: var(--ink); color: var(--concrete); }
+  html.inverted .rocker .on { background: var(--concrete); color: var(--ink); }
+  html.inverted .rocker .off { background: var(--ink); color: var(--concrete); }
+  .rocker:focus-visible { outline: var(--rule) solid var(--klein); outline-offset: 3px; }
+  .rocker:active { transform: translate(2px, 2px); }
+
+  /* ── Instrument grid ──────────────────────────────────── */
+  .instruments {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: minmax(200px, 1fr);
+  }
+
+  .cell {
+    position: relative;
+    border-right: var(--rule) solid var(--ink);
+    border-bottom: var(--rule) solid var(--ink);
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    background: var(--concrete);
+    cursor: crosshair;
+  }
+  .cell:nth-child(4n) { border-right: none; }
+  .cell:focus-visible { outline: var(--rule) solid var(--klein); outline-offset: calc(var(--rule) * -2); }
+
+  /* Harsh: inversion is instant, no transition property at all */
+  .cell:hover, .cell.stamped {
+    background: var(--ink);
+    color: var(--concrete);
+  }
+  .cell.stamped .reading { color: var(--klein); }
+  .cell:active .reading { transform: translate(3px, 4px); }
+  .cell.stamped .tag span:first-child::after {
+    content: " / Held";
+    color: var(--klein);
+  }
+
+  .cell .tag {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .cell .tag .unit { color: var(--klein); }
+  .cell:hover .tag .unit { color: inherit; }
+
+  .reading {
+    font-size: clamp(3rem, 7.5vw, 7rem);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    font-variation-settings: "wght" 100, "wdth" 100;
+    font-variant-numeric: tabular-nums;
+    will-change: font-variation-settings;
+    align-self: flex-end;
+  }
+
+  .cell .note { max-width: 24ch; line-height: 1.6; opacity: 0.75; }
+
+  .cell.wide { grid-column: span 2; }
+
+  /* ── Marching status strip ────────────────────────────── */
+  .strip {
+    border-bottom: var(--rule) solid var(--ink);
+    overflow: hidden;
+    background: var(--klein);
+    color: var(--bone);
+  }
+  html.inverted .strip { color: #f0eee7; }
+  .strip .belt {
+    display: flex;
+    white-space: nowrap;
+    width: max-content;
+    padding: 10px 0;
+    animation: march 16s steps(64) infinite; /* stepped: it clunks, not glides */
+  }
+  .strip .belt span { padding: 0 2.5em; }
+
+  @keyframes march {
+    to { transform: translateX(-50%); }
+  }
+
+  /* ── Below the fold: the ledger slab ──────────────────── */
+  .ledger {
+    border: var(--rule) solid var(--ink);
+    border-top: none;
+  }
+
+  .slab {
+    padding: 9vh 32px;
+    border-bottom: var(--rule) solid var(--ink);
+  }
+  .slab h2 {
+    font-size: clamp(2.6rem, 8.5vw, 8rem);
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+    font-variation-settings: "wght" 860, "wdth" 62;
+    max-width: 14ch;
+  }
+  .slab h2 em {
+    font-style: normal;
+    color: var(--klein);
+    font-variation-settings: "wght" 140, "wdth" 125;
+  }
+  .slab p {
+    margin-top: 28px;
+    max-width: 52ch;
+    line-height: 1.75;
+    font-size: 1.02rem;
+  }
+
+  .log { display: grid; }
+  .log-row {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    gap: 18px;
+    align-items: baseline;
+    padding: 13px 32px;
+    border-bottom: 1px solid var(--ink);
+  }
+  .log-row:last-child { border-bottom: none; }
+  .log-row:hover { background: var(--ink); color: var(--concrete); }
+  .log-row .t { color: var(--klein); }
+  .log-row:hover .t { color: inherit; }
+  .log-row .v { font-variant-numeric: tabular-nums; }
+
+  footer.base {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 32px;
+    border-top: var(--rule) solid var(--ink);
+  }
+
+  /* ── Responsive ───────────────────────────────────────── */
+  @media (max-width: 980px) {
+    .instruments { grid-template-columns: repeat(2, 1fr); }
+    .cell:nth-child(4n) { border-right: var(--rule) solid var(--ink); }
+    .cell:nth-child(2n) { border-right: none; }
+    header { grid-template-columns: 1fr; align-items: start; }
+    .masthead-side { align-items: flex-start; }
+    .masthead-side p { text-align: left; }
+  }
+  @media (max-width: 560px) {
+    .instruments { grid-template-columns: 1fr; }
+    .cell, .cell:nth-child(4n), .cell:nth-child(2n) { border-right: none; }
+    .cell.wide { grid-column: span 1; }
+    .log-row { grid-template-columns: 72px 1fr auto; padding: 13px 20px; }
+    header, .slab, footer.base { padding-left: 20px; padding-right: 20px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .strip .belt { animation: none; }
+    .cell:active .reading, .rocker:active { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="room">
+  <header>
+    <h1 id="title">Control<br />Room</h1>
+    <div class="masthead-side">
+      <span class="mono">Exhibit_003 / This page, measuring itself</span>
+      <p class="mono">Every reading below is live. The weight of each numeral is its value. Nothing is simulated. Nothing leaves this page.</p>
+      <button class="rocker" id="rocker" aria-pressed="false" aria-label="Invert the room">
+        <span class="off">Concrete</span><span class="on">Invert</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="instruments" id="instruments">
+    <div class="cell" tabindex="0" data-key="frame">
+      <div class="tag mono"><span>Frame rate</span><span class="unit">F/S</span></div>
+      <div class="reading" id="r-frame">00</div>
+    </div>
+    <div class="cell" tabindex="0" data-key="pointer">
+      <div class="tag mono"><span>Pointer speed</span><span class="unit">PX/S</span></div>
+      <div class="reading" id="r-pointer">0000</div>
+    </div>
+    <div class="cell" tabindex="0" data-key="input">
+      <div class="tag mono"><span>Input events</span><span class="unit">Σ</span></div>
+      <div class="reading" id="r-input">0000</div>
+    </div>
+    <div class="cell" tabindex="0" data-key="clock">
+      <div class="tag mono"><span>Session</span><span class="unit">M:S</span></div>
+      <div class="reading" id="r-clock">0:00</div>
+    </div>
+    <div class="cell" tabindex="0" data-key="scroll">
+      <div class="tag mono"><span>Scroll depth</span><span class="unit">%</span></div>
+      <div class="reading" id="r-scroll">000</div>
+    </div>
+    <div class="cell" tabindex="0" data-key="nodes">
+      <div class="tag mono"><span>DOM nodes</span><span class="unit">N</span></div>
+      <div class="reading" id="r-nodes">000</div>
+    </div>
+    <div class="cell wide" tabindex="0" data-key="viewport">
+      <div class="tag mono"><span>Viewport</span><span class="unit">PX</span></div>
+      <div class="reading" id="r-viewport">0000 × 0000</div>
+    </div>
+  </div>
+
+  <div class="strip" aria-hidden="true">
+    <div class="belt mono" id="belt"></div>
+  </div>
+</div>
+
+<div class="ledger">
+  <div class="slab">
+    <h2>The page is <em>the material.</em></h2>
+    <p>Brutalism keeps the pipes on the outside. This dashboard has no data
+       source behind it: the frame loop you are scrolling with, the pointer
+       you are moving, the nodes this document is built from are the entire
+       subject. Press any instrument to hold its reading. Flip the rocker
+       and the room inverts in a single frame, because a switch that fades
+       is lying about being a switch.</p>
+  </div>
+  <div class="log" id="log" aria-live="off"></div>
+  <footer class="base mono">
+    <span>Poured 2026 · Frontend Exhibit</span>
+    <span>Archivo variable · Fragment Mono · No libraries</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $ = (id) => document.getElementById(id);
+
+  const readings = {
+    frame: $("r-frame"), pointer: $("r-pointer"), input: $("r-input"),
+    clock: $("r-clock"), scroll: $("r-scroll"), nodes: $("r-nodes"),
+    viewport: $("r-viewport"),
+  };
+  const title = $("title");
+
+  /* Weight IS the value: map a 0..1 signal onto the wght axis.
+     A hovered instrument compresses to wdth 62: the hand loads the beam. */
+  let hoveredKey = null;
+  const setWeight = (el, t, key) => {
+    const w = Math.round(100 + Math.min(Math.max(t, 0), 1) * 800);
+    const wd = key && key === hoveredKey ? 62 : 100;
+    el.style.fontVariationSettings = `"wght" ${w}, "wdth" ${wd}`;
+  };
+
+  /* ── Signals ─────────────────────────────────────────── */
+  const t0 = performance.now();
+  let frames = 0, fps = 0, lastFpsAt = t0;
+  let pointerPx = 0, lastPX = null, lastPY = null, lastPT = 0, pointerSpeed = 0;
+  let inputs = 0, scrollPct = 0, nodeCount = 0;
+
+  addEventListener("pointermove", (e) => {
+    const now = performance.now();
+    if (lastPX !== null) {
+      const d = Math.hypot(e.clientX - lastPX, e.clientY - lastPY);
+      const dt = Math.max(8, now - lastPT);
+      pointerSpeed = pointerSpeed * 0.7 + (d / dt) * 1000 * 0.3;
+    }
+    lastPX = e.clientX; lastPY = e.clientY; lastPT = now;
+  }, { passive: true });
+
+  ["pointerdown", "keydown", "wheel", "pointermove"].forEach((t) =>
+    addEventListener(t, () => { inputs++; }, { passive: true }));
+
+  addEventListener("scroll", () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    scrollPct = max > 0 ? (scrollY / max) * 100 : 0;
+  }, { passive: true });
+
+  /* Stamp-to-hold: press an instrument to freeze its face */
+  document.querySelectorAll(".cell").forEach((cell) => {
+    cell.setAttribute("role", "button");
+    cell.setAttribute("aria-pressed", "false");
+    const label = cell.querySelector(".tag span").textContent;
+    cell.setAttribute("aria-label", label + " instrument. Press to hold the reading.");
+    const toggle = () => {
+      const on = cell.classList.toggle("stamped");
+      cell.setAttribute("aria-pressed", String(on));
+    };
+    cell.addEventListener("pointerdown", toggle);
+    cell.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+    });
+    cell.addEventListener("pointerenter", () => { hoveredKey = cell.dataset.key; });
+    cell.addEventListener("pointerleave", () => {
+      if (hoveredKey === cell.dataset.key) hoveredKey = null;
+    });
+  });
+
+  /* Master rocker */
+  const rocker = $("rocker");
+  rocker.addEventListener("click", () => {
+    const on = document.documentElement.classList.toggle("inverted");
+    rocker.setAttribute("aria-pressed", String(on));
+  });
+
+  /* Marching strip content */
+  const beltText = "All readings live · Weight is the value · Nothing leaves this page · ";
+  $("belt").innerHTML = "<span>" + (beltText.repeat(4) + beltText.repeat(4))
+    .split(" · ").join(" · </span><span>") + "</span>";
+
+  /* Ledger: a row per instrument, appended as real events happen */
+  const log = $("log");
+  const logged = [];
+  function addLog(t, msg, v) {
+    const row = document.createElement("div");
+    row.className = "log-row mono";
+    row.innerHTML = `<span class="t">${t}</span><span>${msg}</span><span class="v">${v}</span>`;
+    log.prepend(row);
+    logged.push(row);
+    if (logged.length > 14) logged.shift().remove();
+  }
+  addLog("0:00", "Room opened. All instruments reading.", "OK");
+
+  let lastLogAt = 0, lastLogged = {};
+  function maybeLog(now) {
+    if (now - lastLogAt < 4000) return;
+    const mm = Math.floor((now - t0) / 60000);
+    const ss = String(Math.floor(((now - t0) % 60000) / 1000)).padStart(2, "0");
+    const t = mm + ":" + ss;
+    if (fps && fps !== lastLogged.fps) {
+      addLog(t, "Frame loop steady.", fps + " F/S"); lastLogged.fps = fps;
+    } else if (Math.round(scrollPct) !== lastLogged.scroll) {
+      addLog(t, "Reader moved through the document.", Math.round(scrollPct) + "%");
+      lastLogged.scroll = Math.round(scrollPct);
+    } else if (inputs !== lastLogged.inputs) {
+      addLog(t, "Input registered.", "Σ " + inputs); lastLogged.inputs = inputs;
+    }
+    lastLogAt = now;
+  }
+
+  /* ── The loop ────────────────────────────────────────── */
+  let lastNodeSweep = 0;
+
+  function tick(now) {
+    frames++;
+    if (now - lastFpsAt >= 500) {
+      fps = Math.round(frames * 1000 / (now - lastFpsAt));
+      frames = 0; lastFpsAt = now;
+    }
+    pointerSpeed *= 0.96;
+
+    if (now - lastNodeSweep > 1000) {
+      nodeCount = document.getElementsByTagName("*").length;
+      lastNodeSweep = now;
+    }
+
+    /* Faces */
+    const held = (k) => readings[k].closest(".cell").classList.contains("stamped");
+
+    if (!held("frame")) {
+      readings.frame.textContent = String(Math.min(fps, 99)).padStart(2, "0");
+      setWeight(readings.frame, fps / 60, "frame");
+    }
+    if (!held("pointer")) {
+      readings.pointer.textContent = String(Math.round(pointerSpeed)).padStart(4, "0");
+      setWeight(readings.pointer, pointerSpeed / 2400, "pointer");
+    }
+    if (!held("input")) {
+      readings.input.textContent = String(Math.min(inputs, 9999)).padStart(4, "0");
+      setWeight(readings.input, inputs / 3000, "input");
+    }
+    if (!held("clock")) {
+      const mm = Math.floor((now - t0) / 60000);
+      const ss = String(Math.floor(((now - t0) % 60000) / 1000)).padStart(2, "0");
+      readings.clock.textContent = mm + ":" + ss;
+      setWeight(readings.clock, ((now - t0) / 1000 % 60) / 60, "clock");
+    }
+    if (!held("scroll")) {
+      readings.scroll.textContent = String(Math.round(scrollPct)).padStart(3, "0");
+      setWeight(readings.scroll, scrollPct / 100, "scroll");
+    }
+    if (!held("nodes")) {
+      readings.nodes.textContent = String(nodeCount).padStart(3, "0");
+      setWeight(readings.nodes, nodeCount / 400, "nodes");
+    }
+    if (!held("viewport")) {
+      readings.viewport.textContent = innerWidth + " × " + innerHeight;
+      setWeight(readings.viewport, innerWidth / 2200, "viewport");
+    }
+
+    /* Masthead breathes with aggregate activity (skipped for reduced motion) */
+    if (!reduce) {
+      const load = Math.min(1,
+        (fps / 60) * 0.35 + Math.min(pointerSpeed / 2400, 1) * 0.5 + (scrollPct / 100) * 0.15);
+      const w = Math.round(220 + load * 680);
+      title.style.fontVariationSettings = `"wght" ${w}, "wdth" 78`;
+    }
+
+    maybeLog(now);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

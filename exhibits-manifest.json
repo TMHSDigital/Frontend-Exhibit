@@ -78,6 +78,18 @@
       "createdAt": "2026-07-07",
       "dependencies": ["lenis@1.1.14", "gsap@3.12.5"],
       "accentColor": "#d8ff3e"
+    },
+    {
+      "slug": "control-room",
+      "title": "Control Room",
+      "description": "A brutalist dashboard where the page measures itself. Frame rate, pointer speed, input events, DOM nodes: every numeral's variable font weight is its own live value. Harsh instant inversions, stamp-to-hold instruments, a one-frame master invert.",
+      "entry": "exhibits/control-room/index.html",
+      "tags": ["typography", "micro-interactions", "layout", "theme"],
+      "status": "live",
+      "author": "claude",
+      "createdAt": "2026-07-07",
+      "dependencies": [],
+      "accentColor": "#1a2fd6"
     }
   ]
 }
