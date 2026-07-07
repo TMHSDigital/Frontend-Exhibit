@@ -1,109 +1,71 @@
-<div align="center">
+# Frontend Exhibit
 
-# ✦ FRONTEND EXHIBIT ✦
+A public showcase of isolated frontend mini-projects: themes, micro-interactions, 3D, and typography animation. Each project (an "exhibit") is self-contained, registered through a central manifest, and rendered on a single GitHub Pages hub.
 
-### *A living gallery of bleeding-edge frontend craft*
-
-Themes · Micro-interactions · 3D · Typography in motion
-
-<br/>
-
-![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-b31b1b?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Foundations_Laid-7c5cff?style=for-the-badge)
-![Built by](https://img.shields.io/badge/Built_by-Autonomous_Agents-0b0b0f?style=for-the-badge)
-
-<br/>
-
-*Every exhibit is a self-contained experiment. Every experiment ships to the gallery.*
-
-</div>
-
----
-
-## 🏛 What This Is
-
-**Frontend Exhibit** is a public showcase repository where isolated mini-projects — *exhibits* — demonstrate advanced frontend techniques. Each exhibit lives in its own room of the gallery, fully self-contained, registered through a central manifest, and rendered together on a single GitHub Pages hub.
-
-> **Think of it as a museum:** the hub is the lobby, `exhibits-manifest.json` is the curator's ledger, and each folder under `exhibits/` is a wing you can walk into.
-
----
-
-## 🗺 Repository Map
+## Repository map
 
 | Path | Role |
 | :--- | :--- |
-| `exhibits/` | 🖼 Isolated mini-projects — one folder per exhibit, each with its own `index.html` |
-| `exhibits-manifest.json` | 📖 The **registry ledger** — machine-readable catalog of every exhibit |
-| `assets/css/` | 🎨 Shared design tokens: fluid type scale, fluid spacing, motion curves |
-| `assets/js/` | ⚙️ Shared utilities: manifest loader + validation for the hub |
-| `LICENSE` | ⚖️ GNU GPL-3.0 — strong copyleft (see below) |
-| `.gitignore` | 🛡 Public-repo guardrails: secrets, AI caches, IDE state never committed |
+| `index.html` | The hub. Sidebar catalogue plus a full-viewport iframe stage. |
+| `exhibits/` | Isolated mini-projects, one folder per exhibit, each with its own `index.html`. |
+| `exhibits-manifest.json` | Machine-readable registry of every exhibit. |
+| `assets/css/` | Shared design tokens: fluid type scale, fluid spacing, motion curves. |
+| `assets/js/` | Shared utilities: manifest loading and validation for the hub. |
+| `LICENSE` | GNU GPL-3.0. |
+| `.gitignore` | Public-repo guardrails: secrets, AI tool caches, and IDE state are never committed. |
 
----
+## The exhibit registry
 
-## 🤖 The Autonomous Exhibit Registry
-
-New exhibits are built and registered by autonomous agents without human merge conflicts. The contract is simple and strict:
+New exhibits are built and registered without touching the hub code. The contract:
 
 ```
 exhibits/
-└── <your-slug>/          ← kebab-case, unique
-    ├── index.html        ← required entry point
-    ├── thumbnail.webp    ← hub card image
-    └── …                 ← anything else, fully self-contained
+└── <slug>/               kebab-case, unique
+    ├── index.html        required entry point
+    ├── thumbnail.webp    hub card image
+    └── ...               anything else, fully self-contained
 ```
 
-**Registration flow:**
+Registration steps:
 
-1. **Build** the exhibit inside `exhibits/<slug>/` — no imports from sibling exhibits.
-2. **Copy** the `exhibitEntryTemplate` from `exhibits-manifest.json`.
-3. **Append** the filled entry to the manifest's `exhibits` array — *never mutate existing entries*.
-4. **Tag** it using only values from `allowedTags`; set `status` to `draft` until reviewed, then `live`.
+1. Build the exhibit inside `exhibits/<slug>/`. No imports from sibling exhibits.
+2. Copy the `exhibitEntryTemplate` from `exhibits-manifest.json`.
+3. Append the filled entry to the manifest's `exhibits` array. Never modify or remove existing entries.
+4. Use only tags from `allowedTags`. Set `status` to `draft` until reviewed, then `live`.
 
-The hub loads the manifest at runtime, validates each entry (slug format, path containment, status), and silently drops anything malformed — so a bad registration can never break the gallery.
+The hub loads the manifest at runtime, validates each entry (slug format, path containment, status), and drops anything malformed. A bad registration cannot break the gallery.
 
----
+## Viewing the site
 
-## 🧭 Navigating the Gallery (GitHub Pages)
+On GitHub Pages:
 
-Once Pages is enabled, the site will resolve as:
-
-| URL | What you'll see |
+| URL | Content |
 | :--- | :--- |
-| `/Frontend-Exhibit/` | The **hub** — every `live` exhibit as a card, filterable by tag |
-| `/Frontend-Exhibit/exhibits/<slug>/` | A single exhibit, full-bleed |
+| `/Frontend-Exhibit/` | The hub. Every `live` exhibit appears in the catalogue. |
+| `/Frontend-Exhibit/#/<slug>` | Deep link to a specific exhibit inside the hub. |
+| `/Frontend-Exhibit/exhibits/<slug>/` | A single exhibit, full screen. |
 
-Exhibits are plain static HTML/CSS/JS — no build step required to view them. Clone, open, explore:
+Append `?drafts` to the hub URL to preview exhibits still marked `draft`.
+
+Locally, serve the repository root over HTTP (the manifest cannot be fetched from `file://`):
 
 ```bash
-git clone https://github.com/<you>/Frontend-Exhibit.git
+git clone https://github.com/TMHSDigital/Frontend-Exhibit.git
 cd Frontend-Exhibit
-npx serve .   # or any static file server
+npx serve .
 ```
 
----
+There is no build step. Everything is static HTML, CSS, and JavaScript.
 
-## 🛡 Security Posture
+## Security
 
-This repository is **entirely public**, so the guardrails are deliberate:
+This repository is public, so the guardrails are strict:
 
-- **No secrets, ever.** `.gitignore` blocks `.env*`, keys, certificates, tokens, and credential files by pattern.
-- **No AI-tooling leakage.** Local agent caches and configs (`.claude/`, `.cursor/`, `.aider*`, and friends) are excluded.
-- **No trackers.** The manifest rules forbid analytics beacons and third-party trackers in any exhibit.
-- **Manifest validation.** The hub only renders entries that pass slug, path, and status checks.
+- No secrets. `.gitignore` blocks `.env*`, keys, certificates, tokens, and credential files by pattern.
+- No AI tooling leakage. Local agent caches and configs (`.claude/`, `.cursor/`, `CLAUDE.md`, and similar) are excluded.
+- No trackers. The manifest rules forbid analytics beacons and third-party trackers in any exhibit.
+- Manifest validation. The hub only renders entries that pass slug, path, and status checks.
 
----
+## License
 
-## ⚖️ License
-
-Released under the **GNU General Public License v3.0** — a strong copyleft license. You may study, run, and modify this work, but any distributed derivative **must remain open under GPL-3.0** with source available. Commercial use inside closed-source products is not permitted. See [`LICENSE`](LICENSE) for the full terms.
-
----
-
-<div align="center">
-
-*The gallery doors are open. First exhibits arriving soon.*
-
-**✦**
-
-</div>
+Released under the GNU General Public License v3.0, a strong copyleft license. You may study, run, and modify this work, but any distributed derivative must remain open under GPL-3.0 with source available. See [LICENSE](LICENSE) for the full terms.

@@ -20,7 +20,7 @@
       "Shared design tokens may be consumed from assets/css/ and assets/js/ but never modified by an exhibit agent.",
       "All 'tags' values must come from the 'allowedTags' list; propose additions via a manifest PR, not ad-hoc strings.",
       "'status' must be one of: draft | live | archived. Only 'live' exhibits render on the hub.",
-      "No exhibit may include secrets, API keys, analytics beacons, or third-party trackers — this repository is public."
+      "No exhibit may include secrets, API keys, analytics beacons, or third-party trackers. This repository is public."
     ]
   },
   "allowedTags": [
