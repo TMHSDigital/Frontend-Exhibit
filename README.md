@@ -14,6 +14,14 @@ A public showcase of isolated frontend mini-projects: themes, micro-interactions
 | `LICENSE` | GNU GPL-3.0. |
 | `.gitignore` | Public-repo guardrails: secrets, AI tool caches, and IDE state are never committed. |
 
+## Exhibits
+
+| No. | Exhibit | Focus | Technology | Interaction |
+| :-- | :--- | :--- | :--- | :--- |
+| 001 | [The Gilded Age](exhibits/gilded-age/) | Procedural gold leaf material under a raking light, built around Twain's "thin gold over iron" coinage | WebGL2 fragment shader (fbm height field, normal-mapped specular lighting, noise-thresholded damage mask), 2D canvas particle debris, no libraries | Move the pointer to rake light across the leaf. Press and drag to burnish through to the iron beneath. Removing enough surface triggers the finale. |
+
+Live at [`/#/gilded-age`](https://tmhsdigital.github.io/Frontend-Exhibit/#/gilded-age) once GitHub Pages is enabled.
+
 ## The exhibit registry
 
 New exhibits are built and registered without touching the hub code. The contract:
@@ -32,6 +40,7 @@ Registration steps:
 2. Copy the `exhibitEntryTemplate` from `exhibits-manifest.json`.
 3. Append the filled entry to the manifest's `exhibits` array. Never modify or remove existing entries.
 4. Use only tags from `allowedTags`. Set `status` to `draft` until reviewed, then `live`.
+5. Exhibits render inside the hub's iframe. Any link that leaves the exhibit (back to the catalogue, external pages) must use `target="_top"` or `target="_blank"`, or the hub will load nested inside itself.
 
 The hub loads the manifest at runtime, validates each entry (slug format, path containment, status), and drops anything malformed. A bad registration cannot break the gallery.
 
