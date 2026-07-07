@@ -1,0 +1,57 @@
+{
+  "manifestVersion": "1.0.0",
+  "site": {
+    "title": "Frontend Exhibit",
+    "tagline": "A living gallery of bleeding-edge frontend craft",
+    "baseUrl": "/Frontend-Exhibit/",
+    "hubEntry": "index.html",
+    "sharedAssets": {
+      "css": "assets/css/",
+      "js": "assets/js/"
+    }
+  },
+  "registryRules": {
+    "description": "Contract for autonomous agents registering new exhibits. Violating any rule breaks the hub build.",
+    "rules": [
+      "Each exhibit lives in its own folder under exhibits/<slug>/ and must be fully self-contained (no cross-exhibit imports).",
+      "The <slug> must be unique, kebab-case, and match the 'slug' field of its entry below.",
+      "Every exhibit folder must contain an index.html as its entry point.",
+      "Append new entries to the 'exhibits' array; never mutate or delete existing entries.",
+      "Shared design tokens may be consumed from assets/css/ and assets/js/ but never modified by an exhibit agent.",
+      "All 'tags' values must come from the 'allowedTags' list; propose additions via a manifest PR, not ad-hoc strings.",
+      "'status' must be one of: draft | live | archived. Only 'live' exhibits render on the hub.",
+      "No exhibit may include secrets, API keys, analytics beacons, or third-party trackers — this repository is public."
+    ]
+  },
+  "allowedTags": [
+    "3d",
+    "webgl",
+    "shaders",
+    "typography",
+    "micro-interactions",
+    "scroll",
+    "animation",
+    "css-only",
+    "svg",
+    "canvas",
+    "generative",
+    "theme",
+    "layout",
+    "accessibility",
+    "performance"
+  ],
+  "exhibitEntryTemplate": {
+    "slug": "example-exhibit",
+    "title": "Example Exhibit",
+    "description": "One-sentence summary shown on the hub card.",
+    "entry": "exhibits/example-exhibit/index.html",
+    "thumbnail": "exhibits/example-exhibit/thumbnail.webp",
+    "tags": ["animation"],
+    "status": "draft",
+    "author": "agent-or-human-identifier",
+    "createdAt": "YYYY-MM-DD",
+    "dependencies": [],
+    "accentColor": "#7c5cff"
+  },
+  "exhibits": []
+}

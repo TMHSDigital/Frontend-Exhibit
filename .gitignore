@@ -1,0 +1,120 @@
+# ============================================================
+#  Frontend-Exhibit — strict public-repo .gitignore
+#  Anything matching below must NEVER be committed.
+# ============================================================
+
+# --- Secrets, credentials & environment ---------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.jks
+*.keystore
+credentials.json
+service-account*.json
+secrets.*
+*.secret
+.netrc
+.npmrc
+.yarnrc
+.pypirc
+auth.json
+token.txt
+*.token
+
+# --- AI / LLM development caches & agent state --------------
+.claude/
+.claude-*
+CLAUDE.md
+CLAUDE.local.md
+.cursor/
+.cursorrules.local
+.aider*
+.copilot/
+.github-copilot/
+.codeium/
+.continue/
+.windsurf/
+.ollama/
+.openai/
+.anthropic/
+*.agent-cache
+.mcp.local.json
+
+# --- Dependencies & package managers ------------------------
+node_modules/
+bower_components/
+jspm_packages/
+.pnp/
+.pnp.js
+.yarn/cache/
+.yarn/unplugged/
+vendor/
+
+# --- Build output & bundler caches ---------------------------
+dist/
+build/
+out/
+.output/
+.next/
+.nuxt/
+.svelte-kit/
+.astro/
+.vite/
+.parcel-cache/
+.turbo/
+.cache/
+coverage/
+*.tsbuildinfo
+
+# --- IDE & editor settings -----------------------------------
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.iml
+*.sublime-workspace
+*.sublime-project
+.fleet/
+.zed/
+*.code-workspace
+
+# --- OS junk --------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --- Logs, dumps & temp ---------------------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.eslintcache
+.stylelintcache
+
+# --- Local tooling state ---------------------------------------
+.wrangler/
+.vercel/
+.netlify/
+.firebase/
+.serverless/
+.terraform/
+*.tfstate
+*.tfstate.*

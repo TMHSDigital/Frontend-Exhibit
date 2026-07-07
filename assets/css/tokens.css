@@ -1,0 +1,57 @@
+/* ============================================================
+   Frontend Exhibit — global design tokens
+   Shared baseline consumed by the hub and all exhibits.
+   Exhibits may READ these custom properties, never redefine
+   them at :root — scope overrides to your exhibit's container.
+   ============================================================ */
+
+:root {
+  /* Color — dark-first gallery palette */
+  --fe-bg: #0b0b0f;
+  --fe-surface: #14141b;
+  --fe-surface-raised: #1d1d27;
+  --fe-text: #ececf1;
+  --fe-text-muted: #9a9aa8;
+  --fe-accent: #7c5cff;
+  --fe-accent-hot: #ff4d6d;
+  --fe-line: #2a2a36;
+
+  /* Fluid type scale (clamp: min, preferred, max) */
+  --fe-text-xs: clamp(0.69rem, 0.66rem + 0.15vw, 0.78rem);
+  --fe-text-sm: clamp(0.83rem, 0.79rem + 0.2vw, 0.94rem);
+  --fe-text-base: clamp(1rem, 0.94rem + 0.3vw, 1.19rem);
+  --fe-text-lg: clamp(1.2rem, 1.1rem + 0.5vw, 1.5rem);
+  --fe-text-xl: clamp(1.44rem, 1.28rem + 0.8vw, 1.95rem);
+  --fe-text-2xl: clamp(2.07rem, 1.73rem + 1.7vw, 3.16rem);
+  --fe-text-display: clamp(2.99rem, 2.3rem + 3.4vw, 5.2rem);
+
+  /* Fluid spacing scale */
+  --fe-space-2xs: clamp(0.25rem, 0.23rem + 0.1vw, 0.31rem);
+  --fe-space-xs: clamp(0.5rem, 0.46rem + 0.2vw, 0.63rem);
+  --fe-space-sm: clamp(0.75rem, 0.69rem + 0.3vw, 0.94rem);
+  --fe-space-md: clamp(1rem, 0.92rem + 0.4vw, 1.25rem);
+  --fe-space-lg: clamp(1.5rem, 1.38rem + 0.6vw, 1.88rem);
+  --fe-space-xl: clamp(2.25rem, 2.07rem + 0.9vw, 2.81rem);
+  --fe-space-2xl: clamp(3.38rem, 3.11rem + 1.35vw, 4.22rem);
+
+  /* Motion */
+  --fe-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --fe-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --fe-duration-fast: 150ms;
+  --fe-duration-base: 300ms;
+  --fe-duration-slow: 600ms;
+
+  /* Radii & elevation */
+  --fe-radius-sm: 6px;
+  --fe-radius-md: 12px;
+  --fe-radius-lg: 20px;
+  --fe-shadow-card: 0 8px 30px rgb(0 0 0 / 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fe-duration-fast: 0ms;
+    --fe-duration-base: 0ms;
+    --fe-duration-slow: 0ms;
+  }
+}

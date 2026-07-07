@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>Frontend Exhibit — the gallery</title>
+<meta name="description" content="A living gallery of bleeding-edge frontend craft. Themes, micro-interactions, 3D, typography in motion." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0b0f'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='Georgia,serif' font-size='20' fill='%23d9a441'%3E✦%3C/text%3E%3C/svg%3E" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Instrument+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/tokens.css" />
+
+<style>
+  /* ── Hub palette: the gallery after hours ─────────────── */
+  :root {
+    --hub-ink: var(--fe-bg);
+    --hub-wall: #101014;
+    --hub-ledger: #0d0d11;
+    --hub-gilt: #d9a441;          /* halogen spotlight */
+    --hub-gilt-dim: #8a6a2f;
+    --hub-plaque: #c9c9d4;
+    --hub-whisper: #6f6f7e;
+    --hub-hairline: #232330;
+
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Instrument Sans", system-ui, sans-serif;
+    --font-catalogue: "Spline Sans Mono", ui-monospace, monospace;
+
+    --ledger-w: 292px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: var(--fe-text-base);
+    color: var(--hub-plaque);
+    background: var(--hub-ink);
+    overflow: hidden;
+  }
+
+  /* Film grain over everything — cinematic, static, cheap */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .hub {
+    display: grid;
+    grid-template-columns: var(--ledger-w) 1fr;
+    height: 100dvh;
+  }
+
+  /* ── The curator's ledger (sidebar) ─────────────────────── */
+  .ledger {
+    display: flex;
+    flex-direction: column;
+    background: var(--hub-ledger);
+    border-right: 1px solid var(--hub-hairline);
+    min-height: 0;
+  }
+
+  .masthead {
+    padding: var(--fe-space-lg) var(--fe-space-lg) var(--fe-space-md);
+    border-bottom: 1px solid var(--hub-hairline);
+  }
+
+  .masthead .wing {
+    font-family: var(--font-catalogue);
+    font-size: var(--fe-text-xs);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--hub-gilt);
+  }
+
+  .masthead h1 {
+    margin: 0.35em 0 0.2em;
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: var(--fe-text-xl);
+    font-variation-settings: "opsz" 60;
+    letter-spacing: 0.01em;
+    color: #f2f2f6;
+  }
+
+  .masthead p {
+    margin: 0;
+    font-size: var(--fe-text-sm);
+    color: var(--hub-whisper);
+    font-style: italic;
+    font-family: var(--font-display);
+    font-weight: 300;
+  }
+
+  .catalogue {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--fe-space-sm) 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--hub-hairline) transparent;
+  }
+
+  .catalogue ul { list-style: none; margin: 0; padding: 0; }
+
+  .piece {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--fe-space-sm);
+    align-items: baseline;
+    width: 100%;
+    padding: var(--fe-space-sm) var(--fe-space-lg);
+    background: none;
+    border: 0;
+    border-left: 2px solid transparent;
+    font: inherit;
+    text-align: left;
+    color: var(--hub-plaque);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background var(--fe-duration-fast) var(--fe-ease-out),
+                border-color var(--fe-duration-fast) var(--fe-ease-out);
+  }
+
+  .piece .no {
+    font-family: var(--font-catalogue);
+    font-size: var(--fe-text-xs);
+    color: var(--hub-gilt-dim);
+    letter-spacing: 0.08em;
+  }
+
+  .piece .title {
+    font-weight: 500;
+    font-size: var(--fe-text-sm);
+    line-height: 1.35;
+  }
+
+  .piece .desc {
+    grid-column: 2;
+    margin-top: 2px;
+    font-size: var(--fe-text-xs);
+    color: var(--hub-whisper);
+    line-height: 1.45;
+  }
+
+  .piece:hover { background: rgb(255 255 255 / 0.03); }
+
+  .piece[aria-current="true"] {
+    border-left-color: var(--hub-gilt);
+    background: linear-gradient(90deg, rgb(217 164 65 / 0.08), transparent 70%);
+  }
+  .piece[aria-current="true"] .no { color: var(--hub-gilt); }
+
+  .piece:focus-visible {
+    outline: 2px solid var(--hub-gilt);
+    outline-offset: -2px;
+  }
+
+  .catalogue .vacant {
+    padding: var(--fe-space-lg);
+    font-size: var(--fe-text-sm);
+    color: var(--hub-whisper);
+    line-height: 1.6;
+  }
+  .catalogue .vacant a { color: var(--hub-gilt); }
+
+  .colophon {
+    padding: var(--fe-space-md) var(--fe-space-lg);
+    border-top: 1px solid var(--hub-hairline);
+    font-family: var(--font-catalogue);
+    font-size: var(--fe-text-xs);
+    color: var(--hub-whisper);
+    display: flex;
+    justify-content: space-between;
+    gap: var(--fe-space-sm);
+  }
+  .colophon a { color: inherit; text-decoration: none; }
+  .colophon a:hover, .colophon a:focus-visible { color: var(--hub-gilt); }
+
+  /* ── The stage ───────────────────────────────────────────── */
+  .stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--hub-wall);
+  }
+
+  .plaque-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--fe-space-md);
+    padding: 0 var(--fe-space-lg);
+    height: 52px;
+    flex: none;
+    border-bottom: 1px solid var(--hub-hairline);
+    background: var(--hub-ink);
+  }
+
+  .plaque-bar .now-showing {
+    font-family: var(--font-catalogue);
+    font-size: var(--fe-text-xs);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--hub-whisper);
+    white-space: nowrap;
+  }
+
+  .plaque-bar .current {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: var(--fe-text-base);
+    color: #f2f2f6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+
+  .plaque-bar .open-full {
+    font-size: var(--fe-text-xs);
+    font-family: var(--font-catalogue);
+    color: var(--hub-gilt);
+    text-decoration: none;
+    white-space: nowrap;
+    border: 1px solid var(--hub-gilt-dim);
+    border-radius: var(--fe-radius-sm);
+    padding: 0.35em 0.8em;
+    transition: background var(--fe-duration-fast) var(--fe-ease-out);
+  }
+  .open-full:hover, .open-full:focus-visible { background: rgb(217 164 65 / 0.12); }
+  .open-full[hidden] { display: none; }
+
+  .viewport {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .viewport iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: var(--hub-wall);
+    opacity: 0;
+    transition: opacity var(--fe-duration-slow) var(--fe-ease-out);
+  }
+  .viewport iframe.lit { opacity: 1; }
+
+  /* ── Signature: the bare wall under a breathing spotlight ── */
+  .bare-wall {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    text-align: center;
+    padding: var(--fe-space-xl);
+    transition: opacity var(--fe-duration-slow) var(--fe-ease-out),
+                visibility var(--fe-duration-slow);
+  }
+  .bare-wall.dimmed { opacity: 0; visibility: hidden; }
+
+  .bare-wall::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 46% 38% at 50% 42%,
+        rgb(217 164 65 / 0.13), rgb(217 164 65 / 0.04) 55%, transparent 75%);
+    animation: breathe 7s var(--fe-ease-out) infinite alternate;
+    pointer-events: none;
+  }
+
+  @keyframes breathe {
+    from { opacity: 0.6; transform: scale(0.96); }
+    to   { opacity: 1;   transform: scale(1.04); }
+  }
+
+  .bare-wall .hook {
+    position: relative;
+    width: 1px;
+    height: clamp(48px, 9vh, 90px);
+    background: linear-gradient(to bottom, transparent, var(--hub-gilt-dim));
+    margin-bottom: var(--fe-space-md);
+  }
+  .bare-wall .hook::after {
+    content: "";
+    position: absolute;
+    bottom: -4px;
+    left: -3.5px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1px solid var(--hub-gilt-dim);
+  }
+
+  .bare-wall h2 {
+    position: relative;
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-style: italic;
+    font-size: var(--fe-text-2xl);
+    font-variation-settings: "opsz" 100;
+    color: #e9e2d2;
+    max-width: 18ch;
+    line-height: 1.15;
+  }
+
+  .bare-wall p {
+    position: relative;
+    margin: var(--fe-space-sm) 0 0;
+    font-size: var(--fe-text-sm);
+    color: var(--hub-whisper);
+    max-width: 42ch;
+    line-height: 1.6;
+  }
+
+  /* ── Drawer behaviour on narrow screens ──────────────────── */
+  .drawer-toggle {
+    display: none;
+    background: none;
+    border: 1px solid var(--hub-hairline);
+    border-radius: var(--fe-radius-sm);
+    color: var(--hub-plaque);
+    font-family: var(--font-catalogue);
+    font-size: var(--fe-text-xs);
+    letter-spacing: 0.12em;
+    padding: 0.4em 0.75em;
+    cursor: pointer;
+  }
+  .drawer-toggle:focus-visible { outline: 2px solid var(--hub-gilt); }
+
+  .scrim { display: none; }
+
+  @media (max-width: 860px) {
+    .hub { grid-template-columns: 1fr; }
+
+    .ledger {
+      position: fixed;
+      inset: 0 22% 0 0;
+      z-index: 50;
+      transform: translateX(-102%);
+      transition: transform var(--fe-duration-base) var(--fe-ease-out);
+      box-shadow: var(--fe-shadow-card);
+    }
+    .hub.ledger-open .ledger { transform: none; }
+
+    .drawer-toggle { display: inline-block; }
+
+    .scrim {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      background: rgb(0 0 0 / 0.55);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--fe-duration-base) var(--fe-ease-out);
+    }
+    .hub.ledger-open .scrim { opacity: 1; pointer-events: auto; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bare-wall::before { animation: none; }
+  }
+</style>
+</head>
+
+<body>
+<div class="hub" id="hub">
+
+  <aside class="ledger" id="ledger" aria-label="Exhibit catalogue">
+    <header class="masthead">
+      <span class="wing">West wing · Permanent collection</span>
+      <h1>Frontend Exhibit</h1>
+      <p>a living gallery of frontend craft</p>
+    </header>
+
+    <nav class="catalogue" aria-label="Exhibits">
+      <ul id="catalogue-list"></ul>
+      <div class="vacant" id="vacant-note" hidden>
+        No exhibits are hung yet. The first pieces are being framed —
+        see <a href="exhibits-manifest.json">the curator's ledger</a> for
+        how new work gets registered.
+      </div>
+    </nav>
+
+    <footer class="colophon">
+      <a href="https://github.com/fOuttaMyPaint/Frontend-Exhibit">Source</a>
+      <span>GPL-3.0</span>
+    </footer>
+  </aside>
+
+  <div class="scrim" id="scrim" aria-hidden="true"></div>
+
+  <main class="stage">
+    <div class="plaque-bar">
+      <button class="drawer-toggle" id="drawer-toggle"
+              aria-expanded="false" aria-controls="ledger">Catalogue</button>
+      <span class="now-showing">Now showing</span>
+      <span class="current" id="current-title">—</span>
+      <a class="open-full" id="open-full" target="_blank" rel="noopener" hidden>
+        Open full screen ↗
+      </a>
+    </div>
+
+    <div class="viewport">
+      <section class="bare-wall" id="bare-wall" aria-live="polite">
+        <span class="hook" aria-hidden="true"></span>
+        <h2>The gallery is being hung.</h2>
+        <p>Choose a piece from the catalogue — or return soon, when the
+           first exhibits go up on this wall.</p>
+      </section>
+      <iframe id="stage-frame" title="Exhibit viewer"
+              loading="lazy"
+              sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+    </div>
+  </main>
+
+</div>
+
+<script type="module">
+  import { loadExhibits } from "./assets/js/manifest-loader.js";
+
+  const hub = document.getElementById("hub");
+  const list = document.getElementById("catalogue-list");
+  const vacantNote = document.getElementById("vacant-note");
+  const frame = document.getElementById("stage-frame");
+  const bareWall = document.getElementById("bare-wall");
+  const currentTitle = document.getElementById("current-title");
+  const openFull = document.getElementById("open-full");
+  const drawerToggle = document.getElementById("drawer-toggle");
+  const scrim = document.getElementById("scrim");
+
+  const includeDrafts = new URLSearchParams(location.search).has("drafts");
+  let exhibits = [];
+
+  function slugFromHash() {
+    const m = location.hash.match(/^#\/([a-z0-9-]+)$/);
+    return m ? m[1] : null;
+  }
+
+  function setDrawer(open) {
+    hub.classList.toggle("ledger-open", open);
+    drawerToggle.setAttribute("aria-expanded", String(open));
+  }
+
+  function hang(exhibit) {
+    for (const btn of list.querySelectorAll(".piece")) {
+      btn.setAttribute("aria-current", String(btn.dataset.slug === exhibit.slug));
+    }
+    currentTitle.textContent = exhibit.title;
+    openFull.href = exhibit.entry;
+    openFull.hidden = false;
+
+    frame.classList.remove("lit");
+    bareWall.classList.add("dimmed");
+    frame.addEventListener("load", () => frame.classList.add("lit"), { once: true });
+    frame.src = exhibit.entry;
+
+    document.title = `${exhibit.title} — Frontend Exhibit`;
+    setDrawer(false);
+  }
+
+  function showBareWall() {
+    for (const btn of list.querySelectorAll(".piece")) {
+      btn.setAttribute("aria-current", "false");
+    }
+    currentTitle.textContent = "—";
+    openFull.hidden = true;
+    frame.classList.remove("lit");
+    frame.removeAttribute("src");
+    bareWall.classList.remove("dimmed");
+    document.title = "Frontend Exhibit — the gallery";
+  }
+
+  function route() {
+    const slug = slugFromHash();
+    const exhibit = exhibits.find((e) => e.slug === slug);
+    if (exhibit) hang(exhibit);
+    else showBareWall();
+  }
+
+  function renderCatalogue() {
+    list.textContent = "";
+    exhibits.forEach((exhibit, i) => {
+      const li = document.createElement("li");
+      const btn = document.createElement("a");
+      btn.className = "piece";
+      btn.href = `#/${exhibit.slug}`;
+      btn.dataset.slug = exhibit.slug;
+      btn.setAttribute("aria-current", "false");
+
+      const no = document.createElement("span");
+      no.className = "no";
+      no.textContent = `No. ${String(i + 1).padStart(3, "0")}`;
+
+      const title = document.createElement("span");
+      title.className = "title";
+      title.textContent = exhibit.title;
+
+      btn.append(no, title);
+
+      if (exhibit.description) {
+        const desc = document.createElement("span");
+        desc.className = "desc";
+        desc.textContent = exhibit.description;
+        btn.append(desc);
+      }
+
+      li.append(btn);
+      list.append(li);
+    });
+    vacantNote.hidden = exhibits.length > 0;
+  }
+
+  drawerToggle.addEventListener("click", () =>
+    setDrawer(!hub.classList.contains("ledger-open")));
+  scrim.addEventListener("click", () => setDrawer(false));
+  addEventListener("keydown", (e) => {
+    if (e.key === "Escape") setDrawer(false);
+  });
+  addEventListener("hashchange", route);
+
+  try {
+    exhibits = await loadExhibits({ includeDrafts });
+  } catch (err) {
+    console.error("Could not read the exhibit manifest:", err);
+    vacantNote.innerHTML =
+      "The catalogue could not be read. Serve this site over HTTP " +
+      "(<code>npx serve .</code>) — the manifest can't be fetched from <code>file://</code>.";
+  }
+
+  renderCatalogue();
+  route();
+</script>
+</body>
+</html>
