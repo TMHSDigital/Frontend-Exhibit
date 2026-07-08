@@ -90,6 +90,18 @@
       "createdAt": "2026-07-07",
       "dependencies": [],
       "accentColor": "#1a2fd6"
+    },
+    {
+      "slug": "rewind-os",
+      "title": "Rewind OS",
+      "description": "A working desktop that time-travels through five eras of interface history. Drag the timeline and the whole OS re-dresses itself: phosphor terminal, one-bit bitmap, beveled grey, wet gloss, flat. Same windows, same content, only the chrome travels.",
+      "entry": "exhibits/rewind-os/index.html",
+      "tags": ["theme", "micro-interactions", "animation", "canvas"],
+      "status": "live",
+      "author": "claude",
+      "createdAt": "2026-07-08",
+      "dependencies": [],
+      "accentColor": "#33ff66"
     }
   ]
 }
