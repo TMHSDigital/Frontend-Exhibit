@@ -102,6 +102,18 @@
       "createdAt": "2026-07-08",
       "dependencies": [],
       "accentColor": "#33ff66"
+    },
+    {
+      "slug": "meridian-survey",
+      "title": "Meridian Survey",
+      "description": "An animated infographics dashboard for a fictional radio-sky survey. Donut, bar, and scatter charts where every value is a live spring: class chips, quarter control, and a signal-to-noise slider morph all charts in real time, with cross-chart hover highlighting and a table twin for every chart.",
+      "entry": "exhibits/meridian-survey/index.html",
+      "tags": ["svg", "animation", "micro-interactions", "accessibility"],
+      "status": "live",
+      "author": "claude",
+      "createdAt": "2026-07-08",
+      "dependencies": [],
+      "accentColor": "#3987e5"
     }
   ]
 }

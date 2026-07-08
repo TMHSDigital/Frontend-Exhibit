@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meridian Survey</title>
+<meta name="description" content="An animated infographics dashboard for a fictional radio-sky survey. Every value on screen is a live spring: filters morph the charts instead of redrawing them.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%230d0d0d'/><circle cx='8' cy='8' r='5' fill='none' stroke='%233987e5' stroke-width='2'/><circle cx='8' cy='8' r='1.6' fill='%233987e5'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   MERIDIAN SURVEY — a year of listening to the sky
+   Dark-surface dashboard. Palette per the validated reference set;
+   every animated value is a spring integrated in one rAF loop.
+   ================================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --plane: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --baseline: #383835;
+  --ring: rgba(255, 255, 255, .10);
+  --c-pulsar: #3987e5;   /* slot 1 blue   */
+  --c-quasar: #199e70;   /* slot 2 aqua   */
+  --c-frb:    #c98500;   /* slot 3 yellow */
+  --c-maser:  #008300;   /* slot 4 green  */
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html { color-scheme: dark; }
+body {
+  background: var(--plane);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+.wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 28px 80px;
+}
+
+a { color: var(--ink-2); }
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+button:focus-visible, input:focus-visible, a:focus-visible {
+  outline: 2px solid var(--c-pulsar);
+  outline-offset: 2px;
+}
+svg text { font-family: var(--font-body); }
+
+/* ---------------- masthead ---------------- */
+
+.masthead { margin-bottom: 30px; }
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(30px, 4.6vw, 48px);
+  letter-spacing: -.02em;
+  line-height: 1.05;
+}
+.masthead .dek {
+  margin-top: 10px;
+  max-width: 56ch;
+  color: var(--ink-2);
+}
+
+/* ---------------- filter row ---------------- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 14px 0;
+  margin-bottom: 22px;
+  border-top: 1px solid var(--grid);
+  border-bottom: 1px solid var(--grid);
+}
+.filters .group-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border: 1px solid var(--baseline);
+  border-radius: 999px;
+  color: var(--ink-2);
+  transition: border-color .15s, color .15s, opacity .15s;
+}
+.chip .swatch {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--c);
+  transition: transform .15s;
+}
+.chip[aria-pressed="true"] { border-color: var(--c); color: var(--ink); }
+.chip[aria-pressed="false"] { opacity: .45; }
+.chip[aria-pressed="false"] .swatch { transform: scale(.5); }
+.chip:hover { border-color: var(--c); opacity: 1; }
+.chip .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--baseline);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.seg button {
+  padding: 5px 12px;
+  color: var(--muted);
+  border-right: 1px solid var(--baseline);
+}
+.seg button:last-child { border-right: none; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); }
+.seg button:hover { color: var(--ink); }
+
+.snr {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.snr label { color: var(--muted); font-size: 12.5px; }
+.snr output {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  min-width: 3.5ch;
+  font-size: 12.5px;
+}
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 150px;
+  height: 2px;
+  background: var(--baseline);
+  border-radius: 1px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--plane);
+  box-shadow: 0 0 0 1px var(--baseline);
+  cursor: grab;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--plane);
+  box-shadow: 0 0 0 1px var(--baseline);
+  cursor: grab;
+}
+
+/* ---------------- layout grid ---------------- */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.charts {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--ring);
+  border-radius: 10px;
+  padding: 18px 20px 16px;
+  min-width: 0;
+}
+.card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.card-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14.5px;
+}
+.card-sub { color: var(--muted); font-size: 12px; }
+.card-head .flip {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--muted);
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.card-head .flip:hover { color: var(--ink); border-color: var(--baseline); }
+
+/* stat tiles */
+.tile .label { color: var(--muted); font-size: 12.5px; }
+.tile .value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 34px;
+  letter-spacing: -.01em;
+  line-height: 1.15;
+  margin-top: 2px;
+}
+.tile .unit { font-size: 16px; font-weight: 400; color: var(--ink-2); margin-left: 3px; }
+.tile .note { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+/* chart bodies */
+.chart-body { position: relative; }
+.chart-body svg { width: 100%; height: auto; display: block; }
+.chart-body[hidden] { display: none; }
+
+/* data tables (the WCAG twin) */
+.table-body { max-height: 300px; overflow: auto; }
+.table-body[hidden] { display: none; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--grid); }
+th {
+  color: var(--muted);
+  font-weight: 500;
+  position: sticky; top: 0;
+  background: var(--surface);
+}
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td .keydot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 7px;
+  vertical-align: baseline;
+}
+
+/* tooltip */
+#tip {
+  position: fixed;
+  z-index: 100;
+  pointer-events: none;
+  background: #232322;
+  border: 1px solid var(--baseline);
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .5);
+  opacity: 0;
+  transition: opacity .12s;
+  max-width: 240px;
+}
+#tip.show { opacity: 1; }
+#tip .t-title { display: flex; align-items: center; gap: 7px; font-weight: 600; color: var(--ink); }
+#tip .t-title .keydot { width: 8px; height: 8px; border-radius: 50%; }
+#tip .t-rows { color: var(--ink-2); margin-top: 2px; }
+#tip .t-rows b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* svg chart chrome */
+.gridline { stroke: var(--grid); stroke-width: 1; }
+.axisline { stroke: var(--baseline); stroke-width: 1; }
+.tick-label { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.direct-label { fill: var(--ink-2); font-size: 11.5px; }
+.direct-label.strong { fill: var(--ink); font-weight: 600; }
+.leader { stroke: var(--baseline); stroke-width: 1; fill: none; }
+
+/* donut center */
+.donut-center-num {
+  fill: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 40px;
+  letter-spacing: -.01em;
+}
+.donut-center-label { fill: var(--muted); font-size: 11.5px; }
+
+/* footer */
+.colophon {
+  margin-top: 26px;
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 72ch;
+}
+.colophon a { color: var(--ink-2); }
+
+/* entrance: masthead, filters, then cards rise in sequence */
+.masthead, .filters, .card { animation: rise .55s cubic-bezier(.2, .9, .3, 1) backwards; }
+.filters { animation-delay: .1s; }
+.tiles .card:nth-child(1) { animation-delay: .18s; }
+.tiles .card:nth-child(2) { animation-delay: .24s; }
+.tiles .card:nth-child(3) { animation-delay: .3s; }
+.charts .card:nth-child(1) { animation-delay: .38s; }
+.charts .card:nth-child(2) { animation-delay: .46s; }
+.charts + .card { animation-delay: .56s; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .masthead, .filters, .card { animation: none; }
+}
+
+@media (max-width: 880px) {
+  .charts { grid-template-columns: 1fr; }
+  .tiles { grid-template-columns: 1fr 1fr; }
+  .tiles .tile:first-child { grid-column: 1 / -1; }
+  .snr { margin-left: 0; width: 100%; }
+}
+@media (max-width: 560px) {
+  .wrap { padding: 26px 16px 60px; }
+  .tiles { grid-template-columns: 1fr; }
+  /* keep the sky field readable: scroll it instead of shrinking it */
+  #scatter-body { overflow-x: auto; }
+  #scatter-body svg { min-width: 720px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Meridian Radio Observatory · Annual Survey · 2026</p>
+    <h1>A year of listening to the sky</h1>
+    <p class="dek">Five hundred and twelve confirmed detections across four object classes. Filter by class, quarter, or signal-to-noise floor: every chart re-shapes itself in real time on spring physics, nothing is redrawn from scratch.</p>
+  </header>
+
+  <div class="filters" role="group" aria-label="Data filters">
+    <span class="group-label">Class</span>
+    <span id="class-chips" style="display: inline-flex; gap: 8px; flex-wrap: wrap;"></span>
+    <span class="group-label" style="margin-left: 8px;">Period</span>
+    <span class="seg" id="quarter-seg"></span>
+    <span class="snr">
+      <label for="snr-range">S/N floor</label>
+      <input type="range" id="snr-range" min="0" max="12" step="0.5" value="0">
+      <output id="snr-out" for="snr-range">0.0</output>
+    </span>
+  </div>
+
+  <div class="tiles">
+    <div class="card tile">
+      <div class="label">Confirmed detections</div>
+      <div class="value"><span id="stat-count">0</span></div>
+      <div class="note" id="stat-count-note">of 512 catalogued</div>
+    </div>
+    <div class="card tile">
+      <div class="label">Median signal-to-noise</div>
+      <div class="value"><span id="stat-snr">0</span><span class="unit">σ</span></div>
+      <div class="note">across current selection</div>
+    </div>
+    <div class="card tile">
+      <div class="label">Peak flux density</div>
+      <div class="value"><span id="stat-flux">0</span><span class="unit">mJy</span></div>
+      <div class="note" id="stat-flux-note">strongest source in selection</div>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Composition</span>
+        <span class="card-sub">share of detections by class</span>
+        <button class="flip" data-card="donut" aria-pressed="false">Table</button>
+      </div>
+      <div class="chart-body" id="donut-body">
+        <svg id="donut-svg" viewBox="0 0 420 300" role="img" aria-label="Donut chart of detections by object class"></svg>
+      </div>
+      <div class="table-body" id="donut-table" hidden></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Cadence</span>
+        <span class="card-sub">detections per month</span>
+        <button class="flip" data-card="bars" aria-pressed="false">Table</button>
+      </div>
+      <div class="chart-body" id="bars-body">
+        <svg id="bars-svg" viewBox="0 0 620 300" role="img" aria-label="Bar chart of detections per month"></svg>
+      </div>
+      <div class="table-body" id="bars-table" hidden></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Sky field</span>
+      <span class="card-sub">flux density against distance, one dot per detection</span>
+      <button class="flip" data-card="scatter" aria-pressed="false">Table</button>
+    </div>
+    <div class="chart-body" id="scatter-body">
+      <svg id="scatter-svg" viewBox="0 0 1160 420" role="img" aria-label="Scatter plot of flux density against distance, colored by object class"></svg>
+    </div>
+    <div class="table-body" id="scatter-table" hidden></div>
+  </div>
+
+  <p class="colophon">
+    Synthetic catalogue, seeded so every visit renders the same sky. Exhibit 005 of
+    <a href="../../index.html" target="_top">Frontend Exhibit</a>; palette and mark grammar follow a validated
+    colorblind-safe reference system. No chart library: SVG, one requestAnimationFrame loop, and a spring
+    integrator shared by every number on the page.
+  </p>
+</div>
+
+<div id="tip" role="status"></div>
+
+<script>
+"use strict";
+
+/* ================================================================
+   DATA — seeded synthetic catalogue
+   ================================================================ */
+
+const CLASSES = [
+  { id: "pulsar", name: "Pulsars",           color: "#3987e5" },
+  { id: "quasar", name: "Quasars",           color: "#199e70" },
+  { id: "frb",    name: "Fast radio bursts", color: "#c98500" },
+  { id: "maser",  name: "Masers",            color: "#008300" },
+];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function mulberry32(seed) {
+  return () => {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const DETECTIONS = (() => {
+  const rnd = mulberry32(20260708);
+  const gauss = () => (rnd() + rnd() + rnd() + rnd() - 2) / 2; // approx normal, ~[-1,1]
+  // per-class cluster shapes in (distance kly, flux mJy) space + monthly season
+  const shapes = {
+    pulsar: { n: 190, d: [8, 18],  f: [26, 12], season: (m) => 1 + .3 * Math.sin((m - 2) / 12 * Math.PI * 2) },
+    quasar: { n: 150, d: [62, 20], f: [14, 8],  season: (m) => 1 + .4 * Math.sin((m - 7) / 12 * Math.PI * 2) },
+    frb:    { n: 102, d: [45, 26], f: [42, 11], season: (m) => (m >= 4 && m <= 8 ? 1.7 : .7) },
+    maser:  { n: 70,  d: [4, 6],   f: [8, 5],   season: () => 1 },
+  };
+  const list = [];
+  let idn = 0;
+  for (const cls of CLASSES) {
+    const s = shapes[cls.id];
+    // build a month distribution from the season curve
+    const weights = MONTHS.map((_, m) => s.season(m));
+    const wsum = weights.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < s.n; i++) {
+      let pick = rnd() * wsum, month = 0;
+      while (pick > weights[month]) { pick -= weights[month]; month++; }
+      const dist = Math.max(.5, s.d[0] + gauss() * s.d[1]);
+      const flux = Math.max(.6, s.f[0] + gauss() * s.f[1]);
+      const snr = Math.max(.3, Math.min(14, flux / 4 + gauss() * 2.2 + 1.5));
+      list.push({
+        id: "MRD-" + String(++idn).padStart(3, "0"),
+        cls: cls.id,
+        month,
+        dist: Math.min(88, dist),
+        flux: Math.min(58, flux),
+        snr,
+      });
+    }
+  }
+  return list;
+})();
+
+/* ================================================================
+   SPRINGS — one integrator, every animated value on the page
+   ================================================================ */
+
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const springs = new Set();
+
+class Spring {
+  constructor(value, k = 130, c = 17) {
+    this.x = value; this.v = 0; this.t = value;
+    this.k = k; this.c = c;
+    springs.add(this);
+  }
+  set(target) {
+    this.t = target;
+    if (reduceMotion) { this.x = target; this.v = 0; }
+    return this;
+  }
+  snap(value) { this.x = this.t = value; this.v = 0; return this; }
+  step(dt) {
+    const a = -this.k * (this.x - this.t) - this.c * this.v;
+    this.v += a * dt;
+    this.x += this.v * dt;
+    if (Math.abs(this.x - this.t) < 5e-4 && Math.abs(this.v) < 5e-4) {
+      this.x = this.t; this.v = 0;
+      return false;
+    }
+    return true;
+  }
+}
+
+let lastT = performance.now();
+function loop(now) {
+  const frame = Math.min(.05, (now - lastT) / 1000);
+  lastT = now;
+  // fixed substeps keep stiff springs stable
+  const sub = 3, dt = frame / sub;
+  let live = false;
+  for (let i = 0; i < sub; i++) {
+    for (const s of springs) if (s.step(dt)) live = true;
+  }
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* ================================================================
+   STATE + DERIVED SLICE
+   ================================================================ */
+
+const state = {
+  classes: new Set(CLASSES.map((c) => c.id)),
+  quarter: -1,       // -1 = full year
+  snrFloor: 0,
+};
+
+/* Cross-chart emphasis: hovering a class (chip or donut segment) dims
+   every other class everywhere, on its own spring per class. */
+const emphasis = Object.fromEntries(CLASSES.map((c) => [c.id, new Spring(1, 170, 24)]));
+function setEmphasis(clsId) {
+  for (const c of CLASSES) emphasis[c.id].set(clsId === null || clsId === c.id ? 1 : 0.22);
+}
+
+function slice() {
+  const rows = DETECTIONS.filter((d) =>
+    state.classes.has(d.cls) &&
+    (state.quarter < 0 || Math.floor(d.month / 3) === state.quarter) &&
+    d.snr >= state.snrFloor
+  );
+  const byClass = Object.fromEntries(CLASSES.map((c) => [c.id, 0]));
+  const byMonth = MONTHS.map(() => 0);
+  let peak = null, snrs = [];
+  for (const d of rows) {
+    byClass[d.cls]++;
+    byMonth[d.month]++;
+    snrs.push(d.snr);
+    if (!peak || d.flux > peak.flux) peak = d;
+  }
+  snrs.sort((a, b) => a - b);
+  const median = snrs.length ? snrs[(snrs.length - 1) >> 1] : 0;
+  return { rows, byClass, byMonth, total: rows.length, peak, medianSnr: median };
+}
+
+/* ================================================================
+   TOOLTIP
+   ================================================================ */
+
+const tip = document.getElementById("tip");
+function showTip(x, y, html) {
+  tip.innerHTML = html;
+  tip.classList.add("show");
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let tx = x + 14, ty = y - h - 12;
+  if (tx + w > innerWidth - 8) tx = x - w - 14;
+  if (ty < 8) ty = y + 16;
+  tip.style.left = tx + "px";
+  tip.style.top = ty + "px";
+}
+function hideTip() { tip.classList.remove("show"); }
+const fmt = (n, d = 0) => n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+/* ================================================================
+   STAT TILES  (spring-counted numbers)
+   ================================================================ */
+
+const statCount = new Spring(0);
+const statSnr = new Spring(0);
+const statFlux = new Spring(0);
+const elCount = document.getElementById("stat-count");
+const elSnr = document.getElementById("stat-snr");
+const elFlux = document.getElementById("stat-flux");
+const elFluxNote = document.getElementById("stat-flux-note");
+
+/* ================================================================
+   DONUT — four persistent segments; angle + radius springs
+   ================================================================ */
+
+const donutSvg = document.getElementById("donut-svg");
+const DN = { cx: 210, cy: 152, r: 98, thick: 30 };
+const donutSegs = CLASSES.map((cls) => ({
+  cls,
+  frac: new Spring(0),     // share of the ring
+  bump: new Spring(0),     // hover pull-out
+  path: null, labelG: null,
+}));
+const donutSweep = new Spring(0, 60, 13);  // global reveal sweep
+const donutSpin = new Spring(-0.4, 60, 13); // reveal rotation, settles at 0
+
+function polar(cx, cy, r, a) {
+  return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+}
+function arcPath(cx, cy, r0, r1, a0, a1) {
+  if (a1 - a0 < 1e-4) return "M 0 0";
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  const [x0, y0] = polar(cx, cy, r1, a0), [x1, y1] = polar(cx, cy, r1, a1);
+  const [x2, y2] = polar(cx, cy, r0, a1), [x3, y3] = polar(cx, cy, r0, a0);
+  return `M ${x0} ${y0} A ${r1} ${r1} 0 ${large} 1 ${x1} ${y1} L ${x2} ${y2} A ${r0} ${r0} 0 ${large} 0 ${x3} ${y3} Z`;
+}
+
+let donutHover = null;
+function buildDonut() {
+  const ns = "http://www.w3.org/2000/svg";
+  for (const seg of donutSegs) {
+    const p = document.createElementNS(ns, "path");
+    p.setAttribute("fill", seg.cls.color);
+    p.style.cursor = "pointer";
+    donutSvg.appendChild(p);
+    seg.path = p;
+    const g = document.createElementNS(ns, "g");
+    const t1 = document.createElementNS(ns, "text");
+    t1.setAttribute("class", "direct-label");
+    g.append(t1);
+    donutSvg.appendChild(g);
+    seg.labelG = { g, t1 };
+
+    p.addEventListener("pointerenter", () => { donutHover = seg; seg.bump.set(7); setEmphasis(seg.cls.id); });
+    p.addEventListener("pointerleave", () => {
+      if (donutHover === seg) donutHover = null;
+      seg.bump.set(0); setEmphasis(null); hideTip();
+    });
+    p.addEventListener("pointermove", (e) => {
+      const cur = lastSlice;
+      const n = cur.byClass[seg.cls.id];
+      const pct = cur.total ? (n / cur.total) * 100 : 0;
+      showTip(e.clientX, e.clientY,
+        `<div class="t-title"><span class="keydot" style="background:${seg.cls.color}"></span>${seg.cls.name}</div>
+         <div class="t-rows"><b>${fmt(n)}</b> detections · <b>${fmt(pct, 1)}%</b> of selection</div>`);
+    });
+  }
+  const ns2 = document.createElementNS(ns, "text");
+  ns2.setAttribute("class", "donut-center-num");
+  ns2.setAttribute("text-anchor", "middle");
+  ns2.setAttribute("x", DN.cx); ns2.setAttribute("y", DN.cy + 6);
+  donutSvg.appendChild(ns2);
+  const lb = document.createElementNS(ns, "text");
+  lb.setAttribute("class", "donut-center-label");
+  lb.setAttribute("text-anchor", "middle");
+  lb.setAttribute("x", DN.cx); lb.setAttribute("y", DN.cy + 28);
+  lb.textContent = "detections";
+  donutSvg.appendChild(lb);
+  donutCenter = { num: ns2, label: lb };
+}
+let donutCenter = null;
+
+function renderDonut() {
+  const start = -Math.PI / 2 + donutSpin.x;
+  const sweepK = donutSweep.x;
+  const fracs = donutSegs.map((s) => Math.max(0, s.frac.x));
+  const sum = fracs.reduce((a, b) => a + b, 0) || 1;
+  let a = start;
+  const gapA = 2 / DN.r; // 2px surface gap between segments
+  donutSegs.forEach((seg, i) => {
+    const f = (fracs[i] / sum) * Math.PI * 2 * Math.min(1, sweepK);
+    const visible = f > 0.012;
+    const bump = seg.bump.x;
+    const a0 = a + (visible ? gapA / 2 : 0);
+    const a1 = a + f - (visible ? gapA / 2 : 0);
+    if (visible && a1 > a0) {
+      const mid = (a0 + a1) / 2;
+      const dx = Math.cos(mid) * bump, dy = Math.sin(mid) * bump;
+      seg.path.setAttribute("d", arcPath(DN.cx + dx, DN.cy + dy, DN.r - DN.thick, DN.r, a0, a1));
+      seg.path.setAttribute("opacity", emphasis[seg.cls.id].x.toFixed(3));
+    } else {
+      seg.path.setAttribute("opacity", "0");
+    }
+    // short percent label just outside the arc — names live in the chip legend
+    const share = f / (Math.PI * 2);
+    const L = seg.labelG;
+    if (visible && share > 0.045 && sweepK > .96) {
+      const mid = (a0 + a1) / 2;
+      const [kx, ky] = polar(DN.cx, DN.cy, DN.r + 15, mid);
+      const right = Math.cos(mid) >= 0;
+      L.t1.setAttribute("x", kx); L.t1.setAttribute("y", ky + 4);
+      L.t1.setAttribute("text-anchor", Math.abs(Math.cos(mid)) < .35 ? "middle" : right ? "start" : "end");
+      L.t1.textContent = fmt(share * 100, 1) + "%";
+      L.g.setAttribute("opacity", "1");
+    } else {
+      L.g.setAttribute("opacity", "0");
+    }
+    a += f;
+  });
+  if (donutHover) {
+    const n = lastSlice.byClass[donutHover.cls.id];
+    donutCenter.num.textContent = fmt(n);
+    donutCenter.label.textContent = donutHover.cls.name.toLowerCase();
+  } else {
+    donutCenter.num.textContent = fmt(Math.round(statCount.x));
+    donutCenter.label.textContent = "detections";
+  }
+}
+
+/* ================================================================
+   BARS — 12 persistent columns, height + scale springs
+   ================================================================ */
+
+const barsSvg = document.getElementById("bars-svg");
+const BR = { x0: 44, x1: 604, y0: 24, y1: 252, w: 620, h: 300 };
+const barSprings = MONTHS.map(() => new Spring(0));
+const barYMax = new Spring(80, 100, 20);
+let barEls = [], barGrid = [], barMax = null;
+
+function buildBars() {
+  const ns = "http://www.w3.org/2000/svg";
+  // gridlines + tick labels (4 divisions)
+  for (let i = 0; i <= 4; i++) {
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("class", i === 0 ? "axisline" : "gridline");
+    line.setAttribute("x1", BR.x0); line.setAttribute("x2", BR.x1);
+    const t = document.createElementNS(ns, "text");
+    t.setAttribute("class", "tick-label");
+    t.setAttribute("x", BR.x0 - 8);
+    t.setAttribute("text-anchor", "end");
+    barsSvg.append(line, t);
+    barGrid.push({ line, t, i });
+  }
+  const band = (BR.x1 - BR.x0) / 12;
+  MONTHS.forEach((m, i) => {
+    const cxm = BR.x0 + band * (i + .5);
+    const r = document.createElementNS(ns, "path");
+    r.setAttribute("fill", "#3987e5");
+    barsSvg.appendChild(r);
+    const lab = document.createElementNS(ns, "text");
+    lab.setAttribute("class", "tick-label");
+    lab.setAttribute("text-anchor", "middle");
+    lab.setAttribute("x", cxm);
+    lab.setAttribute("y", BR.y1 + 18);
+    lab.textContent = m;
+    barsSvg.appendChild(lab);
+    // full-column hover target
+    const hit = document.createElementNS(ns, "rect");
+    hit.setAttribute("x", cxm - band / 2);
+    hit.setAttribute("y", BR.y0);
+    hit.setAttribute("width", band);
+    hit.setAttribute("height", BR.y1 - BR.y0);
+    hit.setAttribute("fill", "transparent");
+    barsSvg.appendChild(hit);
+    hit.addEventListener("pointermove", (e) => {
+      const n = lastSlice.byMonth[i];
+      showTip(e.clientX, e.clientY,
+        `<div class="t-title"><span class="keydot" style="background:#3987e5"></span>${MONTHS[i]} 2026</div>
+         <div class="t-rows"><b>${fmt(n)}</b> detections</div>`);
+      barEls.forEach((b, j) => b.rect.setAttribute("opacity", j === i ? "1" : ".45"));
+    });
+    hit.addEventListener("pointerleave", () => {
+      hideTip();
+      barEls.forEach((b) => b.rect.setAttribute("opacity", "1"));
+    });
+    barEls.push({ rect: r, cx: cxm });
+  });
+  // selective direct label on the peak month
+  barMax = document.createElementNS(ns, "text");
+  barMax.setAttribute("class", "direct-label strong");
+  barMax.setAttribute("text-anchor", "middle");
+  barsSvg.appendChild(barMax);
+}
+
+function roundedColumn(cx, w, yTop, yBase) {
+  const r = Math.min(4, (yBase - yTop) / 2, w / 2);
+  if (yBase - yTop < .5) return "M 0 0";
+  const x = cx - w / 2;
+  return `M ${x} ${yBase}
+          L ${x} ${yTop + r}
+          Q ${x} ${yTop} ${x + r} ${yTop}
+          L ${x + w - r} ${yTop}
+          Q ${x + w} ${yTop} ${x + w} ${yTop + r}
+          L ${x + w} ${yBase} Z`;
+}
+
+function renderBars() {
+  const ymax = Math.max(8, barYMax.x);
+  const scale = (BR.y1 - BR.y0) / ymax;
+  barGrid.forEach(({ line, t, i }) => {
+    const y = BR.y1 - (BR.y1 - BR.y0) * (i / 4);
+    line.setAttribute("y1", y); line.setAttribute("y2", y);
+    t.setAttribute("y", y + 4);
+    t.textContent = fmt(Math.round((ymax * i) / 4));
+  });
+  let maxI = 0, maxV = -1;
+  lastSlice.byMonth.forEach((v, i) => { if (v > maxV) { maxV = v; maxI = i; } });
+  barEls.forEach((b, i) => {
+    const h = Math.max(0, barSprings[i].x) * scale;
+    b.rect.setAttribute("d", roundedColumn(b.cx, 22, BR.y1 - h, BR.y1));
+  });
+  // peak label rides its own spring'd column
+  const peakH = Math.max(0, barSprings[maxI].x) * scale;
+  if (maxV > 0 && peakH > 14) {
+    barMax.setAttribute("x", barEls[maxI].cx);
+    barMax.setAttribute("y", BR.y1 - peakH - 7);
+    barMax.textContent = fmt(maxV);
+    barMax.setAttribute("opacity", "1");
+  } else {
+    barMax.setAttribute("opacity", "0");
+  }
+}
+
+/* ================================================================
+   SCATTER — one persistent dot per detection, presence springs
+   ================================================================ */
+
+const scatterSvg = document.getElementById("scatter-svg");
+const SC = { x0: 52, x1: 1136, y0: 20, y1: 366, w: 1160, h: 420, dmax: 90, fmax: 60 };
+const sx = (d) => SC.x0 + (d / SC.dmax) * (SC.x1 - SC.x0);
+const sy = (f) => SC.y1 - (f / SC.fmax) * (SC.y1 - SC.y0);
+let dots = [], scatterPeakLabel = null, scatterHoverRing = null;
+
+function buildScatter() {
+  const ns = "http://www.w3.org/2000/svg";
+  // grid + axes
+  for (let i = 0; i <= 4; i++) {
+    const y = SC.y1 - (SC.y1 - SC.y0) * (i / 4);
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("class", i === 0 ? "axisline" : "gridline");
+    line.setAttribute("x1", SC.x0); line.setAttribute("x2", SC.x1);
+    line.setAttribute("y1", y); line.setAttribute("y2", y);
+    scatterSvg.appendChild(line);
+    const t = document.createElementNS(ns, "text");
+    t.setAttribute("class", "tick-label");
+    t.setAttribute("x", SC.x0 - 8); t.setAttribute("y", y + 4);
+    t.setAttribute("text-anchor", "end");
+    t.textContent = fmt((SC.fmax * i) / 4 | 0);
+    scatterSvg.appendChild(t);
+  }
+  for (let i = 0; i <= 6; i++) {
+    const x = SC.x0 + (SC.x1 - SC.x0) * (i / 6);
+    const t = document.createElementNS(ns, "text");
+    t.setAttribute("class", "tick-label");
+    t.setAttribute("x", x); t.setAttribute("y", SC.y1 + 20);
+    t.setAttribute("text-anchor", "middle");
+    t.textContent = fmt((SC.dmax * i) / 6 | 0);
+    scatterSvg.appendChild(t);
+  }
+  // axis titles
+  const xt = document.createElementNS(ns, "text");
+  xt.setAttribute("class", "tick-label");
+  xt.setAttribute("x", (SC.x0 + SC.x1) / 2); xt.setAttribute("y", SC.y1 + 40);
+  xt.setAttribute("text-anchor", "middle");
+  xt.textContent = "distance (thousand light-years)";
+  scatterSvg.appendChild(xt);
+  const yt = document.createElementNS(ns, "text");
+  yt.setAttribute("class", "tick-label");
+  yt.setAttribute("transform", `translate(14 ${(SC.y0 + SC.y1) / 2}) rotate(-90)`);
+  yt.setAttribute("text-anchor", "middle");
+  yt.textContent = "flux density (mJy)";
+  scatterSvg.appendChild(yt);
+
+  const colorOf = Object.fromEntries(CLASSES.map((c) => [c.id, c.color]));
+  const dotsG = document.createElementNS(ns, "g");
+  scatterSvg.appendChild(dotsG);
+  DETECTIONS.forEach((d) => {
+    const c = document.createElementNS(ns, "circle");
+    c.setAttribute("cx", sx(d.dist));
+    c.setAttribute("cy", sy(d.flux));
+    c.setAttribute("fill", colorOf[d.cls]);
+    c.setAttribute("stroke", "#1a1a19");       // 2px surface ring
+    c.setAttribute("stroke-width", "2");
+    dotsG.appendChild(c);
+    dots.push({ d, el: c, s: new Spring(0, 120, 14) });
+  });
+
+  // hover: nearest-point across the whole plot (no pinpoint targets)
+  scatterHoverRing = document.createElementNS(ns, "circle");
+  scatterHoverRing.setAttribute("fill", "none");
+  scatterHoverRing.setAttribute("stroke", "#ffffff");
+  scatterHoverRing.setAttribute("stroke-width", "1.5");
+  scatterHoverRing.setAttribute("opacity", "0");
+  scatterSvg.appendChild(scatterHoverRing);
+
+  scatterSvg.addEventListener("pointermove", (e) => {
+    const pt = scatterSvg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(scatterSvg.getScreenCTM().inverse());
+    let best = null, bd = 30 * 30;
+    for (const dot of dots) {
+      if (dot.s.t < .5) continue;
+      const dx = sx(dot.d.dist) - p.x, dy = sy(dot.d.flux) - p.y;
+      const dist2 = dx * dx + dy * dy;
+      if (dist2 < bd) { bd = dist2; best = dot; }
+    }
+    if (best) {
+      const cls = CLASSES.find((c) => c.id === best.d.cls);
+      scatterHoverRing.setAttribute("cx", sx(best.d.dist));
+      scatterHoverRing.setAttribute("cy", sy(best.d.flux));
+      scatterHoverRing.setAttribute("r", 9);
+      scatterHoverRing.setAttribute("opacity", "1");
+      showTip(e.clientX, e.clientY,
+        `<div class="t-title"><span class="keydot" style="background:${cls.color}"></span>${best.d.id} · ${cls.name.replace(/s$/, "")}</div>
+         <div class="t-rows"><b>${fmt(best.d.flux, 1)}</b> mJy at <b>${fmt(best.d.dist, 1)}</b> kly · S/N <b>${fmt(best.d.snr, 1)}</b>σ</div>`);
+    } else {
+      scatterHoverRing.setAttribute("opacity", "0");
+      hideTip();
+    }
+  });
+  scatterSvg.addEventListener("pointerleave", () => {
+    scatterHoverRing.setAttribute("opacity", "0");
+    hideTip();
+  });
+
+  // selective direct label: the peak-flux source
+  const g = document.createElementNS(ns, "g");
+  const leader = document.createElementNS(ns, "line");
+  leader.setAttribute("class", "leader");
+  const t = document.createElementNS(ns, "text");
+  t.setAttribute("class", "direct-label");
+  g.append(leader, t);
+  scatterSvg.appendChild(g);
+  scatterPeakLabel = { g, leader, t };
+}
+
+function renderScatter() {
+  for (const dot of dots) {
+    const r = 4.5 * Math.max(0, dot.s.x);
+    if (r < .05) { dot.el.setAttribute("display", "none"); continue; }
+    dot.el.removeAttribute("display");
+    dot.el.setAttribute("r", Math.min(6, r));
+    dot.el.setAttribute("opacity", emphasis[dot.d.cls].x.toFixed(3));
+  }
+  const peak = lastSlice.peak;
+  if (peak) {
+    const x = sx(peak.dist), y = sy(peak.flux);
+    scatterPeakLabel.leader.setAttribute("x1", x + 8);
+    scatterPeakLabel.leader.setAttribute("y1", y - 8);
+    scatterPeakLabel.leader.setAttribute("x2", x + 26);
+    scatterPeakLabel.leader.setAttribute("y2", y - 22);
+    scatterPeakLabel.t.setAttribute("x", x + 30);
+    scatterPeakLabel.t.setAttribute("y", y - 24);
+    scatterPeakLabel.t.textContent = peak.id + " · brightest in selection";
+    scatterPeakLabel.g.setAttribute("opacity", "1");
+  } else {
+    scatterPeakLabel.g.setAttribute("opacity", "0");
+  }
+}
+
+/* ================================================================
+   TABLES — the WCAG-clean twin of every chart
+   ================================================================ */
+
+const colorOfCls = Object.fromEntries(CLASSES.map((c) => [c.id, c.color]));
+const nameOfCls = Object.fromEntries(CLASSES.map((c) => [c.id, c.name]));
+
+function renderTables() {
+  const cur = lastSlice;
+  document.getElementById("donut-table").innerHTML = `
+    <table><thead><tr><th>Class</th><th class="num">Detections</th><th class="num">Share</th></tr></thead><tbody>
+    ${CLASSES.map((c) => `<tr><td><span class="keydot" style="background:${c.color}"></span>${c.name}</td>
+      <td class="num">${fmt(cur.byClass[c.id])}</td>
+      <td class="num">${cur.total ? fmt((cur.byClass[c.id] / cur.total) * 100, 1) : "0.0"}%</td></tr>`).join("")}
+    </tbody></table>`;
+  document.getElementById("bars-table").innerHTML = `
+    <table><thead><tr><th>Month</th><th class="num">Detections</th></tr></thead><tbody>
+    ${MONTHS.map((m, i) => `<tr><td>${m} 2026</td><td class="num">${fmt(cur.byMonth[i])}</td></tr>`).join("")}
+    </tbody></table>`;
+  const rows = [...cur.rows].sort((a, b) => b.flux - a.flux).slice(0, 60);
+  document.getElementById("scatter-table").innerHTML = `
+    <table><thead><tr><th>Source</th><th>Class</th><th class="num">Flux (mJy)</th><th class="num">Distance (kly)</th><th class="num">S/N</th></tr></thead><tbody>
+    ${rows.map((d) => `<tr><td>${d.id}</td>
+      <td><span class="keydot" style="background:${colorOfCls[d.cls]}"></span>${nameOfCls[d.cls]}</td>
+      <td class="num">${fmt(d.flux, 1)}</td><td class="num">${fmt(d.dist, 1)}</td><td class="num">${fmt(d.snr, 1)}</td></tr>`).join("")}
+    </tbody></table>
+    <p style="color: var(--muted); font-size: 11.5px; padding: 8px;">Top 60 by flux shown; the chart plots all ${fmt(cur.total)}.</p>`;
+}
+
+document.querySelectorAll(".flip").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const key = btn.dataset.card;
+    const chart = document.getElementById(key + "-body");
+    const table = document.getElementById(key + "-table");
+    const showTable = table.hidden;
+    table.hidden = !showTable;
+    chart.hidden = showTable;
+    btn.textContent = showTable ? "Chart" : "Table";
+    btn.setAttribute("aria-pressed", String(showTable));
+  });
+});
+
+/* ================================================================
+   FILTERS
+   ================================================================ */
+
+const chipsWrap = document.getElementById("class-chips");
+CLASSES.forEach((c) => {
+  const b = document.createElement("button");
+  b.className = "chip";
+  b.style.setProperty("--c", c.color);
+  b.setAttribute("aria-pressed", "true");
+  b.innerHTML = `<span class="swatch"></span>${c.name} <span class="n"></span>`;
+  b.addEventListener("pointerenter", () => setEmphasis(c.id));
+  b.addEventListener("pointerleave", () => setEmphasis(null));
+  b.addEventListener("focus", () => setEmphasis(c.id));
+  b.addEventListener("blur", () => setEmphasis(null));
+  b.addEventListener("click", () => {
+    if (state.classes.has(c.id) && state.classes.size === 1) return; // never empty
+    state.classes.has(c.id) ? state.classes.delete(c.id) : state.classes.add(c.id);
+    b.setAttribute("aria-pressed", String(state.classes.has(c.id)));
+    retarget(true);
+  });
+  chipsWrap.appendChild(b);
+});
+
+const seg = document.getElementById("quarter-seg");
+["Year", "Q1", "Q2", "Q3", "Q4"].forEach((label, i) => {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.setAttribute("aria-pressed", String(i === 0));
+  b.addEventListener("click", () => {
+    state.quarter = i - 1;
+    seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", "false"));
+    b.setAttribute("aria-pressed", "true");
+    retarget(true);
+  });
+  seg.appendChild(b);
+});
+
+const snrRange = document.getElementById("snr-range");
+const snrOut = document.getElementById("snr-out");
+snrRange.addEventListener("input", () => {
+  state.snrFloor = parseFloat(snrRange.value);
+  snrOut.textContent = state.snrFloor.toFixed(1);
+  retarget();
+});
+
+/* ================================================================
+   RETARGET — the one place data meets springs
+   ================================================================ */
+
+let lastSlice = slice();
+
+function retarget(wave = false) {
+  lastSlice = slice();
+  const cur = lastSlice;
+  statCount.set(cur.total);
+  statSnr.set(cur.medianSnr);
+  statFlux.set(cur.peak ? cur.peak.flux : 0);
+  elFluxNote.textContent = cur.peak ? cur.peak.id + " · " + nameOfCls[cur.peak.cls].replace(/s$/, "").toLowerCase() : "no sources in selection";
+
+  donutSegs.forEach((seg) => seg.frac.set(cur.byClass[seg.cls.id]));
+  // discrete filter changes ripple left-to-right; the slider retargets directly
+  const stagger = wave && !reduceMotion;
+  cur.byMonth.forEach((v, i) => {
+    stagger ? setTimeout(() => barSprings[i].set(v), i * 22) : barSprings[i].set(v);
+  });
+  const rawMax = Math.max(...cur.byMonth, 1);
+  barYMax.set(Math.max(8, Math.ceil(rawMax / 20) * 20)); // /4 divisions stay clean
+
+  const visible = new Set(cur.rows.map((d) => d.id));
+  dots.forEach((dot, i) => {
+    const on = visible.has(dot.d.id);
+    if (stagger && on && dot.s.t < .5) setTimeout(() => dot.s.set(1), (i % 61) * 6);
+    else dot.s.set(on ? 1 : 0);
+  });
+
+  // per-chip counts (against the other active filters)
+  chipsWrap.querySelectorAll(".chip").forEach((chip, i) => {
+    const c = CLASSES[i];
+    const n = DETECTIONS.filter((d) =>
+      d.cls === c.id &&
+      (state.quarter < 0 || Math.floor(d.month / 3) === state.quarter) &&
+      d.snr >= state.snrFloor).length;
+    chip.querySelector(".n").textContent = fmt(n);
+  });
+
+  renderTables();
+}
+
+/* ================================================================
+   RENDER — read every spring, write the DOM. One loop.
+   ================================================================ */
+
+function render() {
+  elCount.textContent = fmt(Math.round(statCount.x));
+  elSnr.textContent = fmt(statSnr.x, 1);
+  elFlux.textContent = fmt(statFlux.x, 1);
+  renderDonut();
+  renderBars();
+  renderScatter();
+}
+
+/* ================================================================
+   REVEAL — the load choreography
+   ================================================================ */
+
+function reveal() {
+  const cur = lastSlice;
+  const delay = (fn, t) => reduceMotion ? fn() : setTimeout(fn, t);
+  delay(() => { statCount.set(cur.total); statSnr.set(cur.medianSnr); statFlux.set(cur.peak.flux); }, 150);
+  delay(() => {
+    donutSweep.set(1);
+    donutSpin.set(0);
+    donutSegs.forEach((seg) => seg.frac.set(cur.byClass[seg.cls.id]));
+  }, 420);
+  cur.byMonth.forEach((v, i) => delay(() => barSprings[i].set(v), 650 + i * 45));
+  dots.forEach((dot, i) => delay(() => dot.s.set(1), 1150 + (i % 97) * 9));
+}
+
+buildDonut();
+buildBars();
+buildScatter();
+retarget();
+// pull everything back to zero, then run the sequence
+statCount.snap(0); statSnr.snap(0); statFlux.snap(0);
+donutSegs.forEach((s) => s.frac.snap(0));
+donutSweep.snap(0);
+if (reduceMotion) donutSpin.snap(0);
+barSprings.forEach((s) => s.snap(0));
+dots.forEach((d) => d.s.snap(0));
+reveal();
+requestAnimationFrame((t) => { lastT = t; requestAnimationFrame(loop); });
+</script>
+</body>
+</html>
