@@ -118,3 +118,4 @@ lerna-debug.log*
 .terraform/
 *.tfstate
 *.tfstate.*
+prompts.md
