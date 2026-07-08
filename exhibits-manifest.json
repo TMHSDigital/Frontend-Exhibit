@@ -114,6 +114,18 @@
       "createdAt": "2026-07-08",
       "dependencies": [],
       "accentColor": "#3987e5"
+    },
+    {
+      "slug": "stillroom",
+      "title": "Stillroom",
+      "description": "A minimal glass workspace over a living gradient field. Frosted panels genuinely refract drifting color blobs beneath them; clicking a card runs a FLIP expansion on generated spring keyframes while the field converges, dilates, and re-tints around it.",
+      "entry": "exhibits/stillroom/index.html",
+      "tags": ["theme", "micro-interactions", "animation", "canvas", "layout"],
+      "status": "live",
+      "author": "claude",
+      "createdAt": "2026-07-08",
+      "dependencies": [],
+      "accentColor": "#c9b8f0"
     }
   ]
 }
