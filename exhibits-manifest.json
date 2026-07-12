@@ -138,6 +138,18 @@
       "createdAt": "2026-07-12",
       "dependencies": [],
       "accentColor": "#a63b2a"
+    },
+    {
+      "slug": "neon-after-closing",
+      "title": "Neon After Closing",
+      "description": "A sign shop at night. Gas tubes sputter, strike, warm to full glow, and hum through a synthesized transformer. Bend your own tube in cursive strokes on the wall, pick a gas, and throw the knife switch, with a dying-transformer failure mode that browns out, buzzes, and restrikes.",
+      "entry": "exhibits/neon-after-closing/index.html",
+      "tags": ["svg", "animation", "micro-interactions", "generative"],
+      "status": "live",
+      "author": "claude",
+      "createdAt": "2026-07-12",
+      "dependencies": [],
+      "accentColor": "#ff5a26"
     }
   ]
 }

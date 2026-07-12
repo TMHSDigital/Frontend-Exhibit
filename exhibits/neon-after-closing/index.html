@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>Neon After Closing — Frontend Exhibit</title>
+<meta name="description" content="A sign shop at night. Gas tubes sputter, strike, warm to full glow, and hum. Bend your own tube on the wall and throw the knife switch." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,300..600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --night: #0a0a0e;
+    --brick: #17151a;
+    --bench-wood: #201510;
+    --brass: #c8a34a;
+    --brass-dim: #7a6330;
+    --chalk: #6b6b78;
+    --mono: "Spline Sans Mono", ui-monospace, monospace;
+    --serif: "Fraunces", Georgia, serif;
+  }
+
+  * { margin: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    background: var(--night);
+    color: var(--chalk);
+    font-family: var(--mono);
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .shop {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── The wall ─────────────────────────────────────────────── */
+  .wall {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+  }
+  .wall svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Film grain, house style */
+  .wall::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0.06;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .sign-group { cursor: pointer; }
+  .sign-group .layer { pointer-events: none; }
+  .sign-group .hit { pointer-events: stroke; stroke: transparent; stroke-width: 34; fill: none; }
+
+  #bend-zone { cursor: crosshair; }
+
+  /* ── The bench ────────────────────────────────────────────── */
+  .bench {
+    flex: none;
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px 34px;
+    padding: 14px 26px 16px;
+    background:
+      linear-gradient(180deg, rgb(255 210 140 / 0.045), transparent 40%),
+      linear-gradient(180deg, #241811, #17100b);
+    border-top: 2px solid #33241a;
+    box-shadow: 0 -18px 40px rgb(0 0 0 / 0.6);
+  }
+  .bench::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: repeating-linear-gradient(90deg,
+      transparent 0 90px, rgb(0 0 0 / 0.22) 90px 92px);
+  }
+
+  .station {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+  }
+  .station > .tag {
+    font-size: 9.5px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: #8a7350;
+  }
+
+  .row { display: flex; align-items: center; gap: 8px; }
+
+  /* Gas swatches: stubs of lit tube */
+  .gas {
+    width: 34px;
+    height: 22px;
+    border: 0;
+    border-radius: 11px;
+    cursor: pointer;
+    background: #101014;
+    position: relative;
+    box-shadow: inset 0 0 0 1px #3a3a44;
+  }
+  .gas::after {
+    content: "";
+    position: absolute;
+    inset: 5px 7px;
+    border-radius: 6px;
+    background: var(--c);
+    opacity: 0.35;
+    filter: blur(0.5px);
+    transition: opacity 200ms ease, box-shadow 200ms ease;
+  }
+  .gas[aria-pressed="true"]::after {
+    opacity: 1;
+    box-shadow: 0 0 10px var(--c), 0 0 22px var(--c);
+  }
+  .gas:focus-visible { outline: 1px solid var(--brass); outline-offset: 3px; }
+
+  /* Transformer selector */
+  .xfmr {
+    font: inherit;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    padding: 5px 10px;
+    background: #14100c;
+    color: #8a7350;
+    border: 1px solid #3a2c1e;
+    cursor: pointer;
+  }
+  .xfmr:first-of-type { border-radius: 3px 0 0 3px; }
+  .xfmr:last-of-type { border-radius: 0 3px 3px 0; border-left: 0; }
+  .xfmr:nth-of-type(2) { border-left: 0; }
+  .xfmr[aria-pressed="true"] { background: #2c1f12; color: var(--brass); }
+  .xfmr:focus-visible { outline: 1px solid var(--brass); outline-offset: 2px; }
+
+  /* Knife switch */
+  .knife {
+    position: relative;
+    width: 92px;
+    height: 62px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .knife .base {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 12px;
+    background: linear-gradient(180deg, #2b2b33, #17171d);
+    border-radius: 3px;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+  }
+  .knife .post {
+    position: absolute;
+    bottom: 8px;
+    width: 10px;
+    height: 14px;
+    background: #494955;
+    border-radius: 2px 2px 0 0;
+  }
+  .knife .post.l { left: 10px; }
+  .knife .post.r { right: 10px; }
+  .knife .blade {
+    position: absolute;
+    left: 13px;
+    bottom: 16px;
+    width: 66px;
+    height: 7px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #e8ddc2, #a89968);
+    transform-origin: 3px 50%;
+    transform: rotate(-38deg);
+    transition: transform 130ms cubic-bezier(0.5, 0, 0.9, 0.6);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+  }
+  .knife .blade::after {
+    content: "";
+    position: absolute;
+    right: -2px;
+    top: -5px;
+    width: 9px;
+    height: 17px;
+    border-radius: 3px;
+    background: #191921;
+  }
+  .knife[aria-pressed="true"] .blade { transform: rotate(0deg); }
+  .knife:focus-visible { outline: 1px solid var(--brass); outline-offset: 3px; }
+
+  .toggle, .scrap {
+    font: inherit;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    padding: 6px 12px;
+    background: #14100c;
+    color: #8a7350;
+    border: 1px solid #3a2c1e;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .toggle[aria-pressed="true"] { color: var(--brass); background: #2c1f12; }
+  .toggle:focus-visible, .scrap:focus-visible { outline: 1px solid var(--brass); outline-offset: 2px; }
+  .scrap:hover { color: #c86a4a; border-color: #5a3122; }
+
+  .bench .hint {
+    max-width: 24ch;
+    font-size: 10px;
+    line-height: 1.6;
+    letter-spacing: 0.06em;
+    color: #6e5c40;
+  }
+
+  .bench .backlink {
+    position: absolute;
+    right: 16px;
+    bottom: 10px;
+    font-size: 9.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #5c4d36;
+    text-decoration: none;
+  }
+  .bench .backlink:hover, .bench .backlink:focus-visible { color: var(--brass); }
+
+  @media (max-width: 760px) {
+    .bench { gap: 8px 18px; }
+    .bench .hint { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .knife .blade { transition-duration: 1ms; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shop">
+  <div class="wall" id="wall-box">
+    <svg id="wall" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"
+         aria-label="A neon sign shop wall at night. Signs can be switched by clicking them. Draw in the chalk rectangle to bend your own tube.">
+      <defs>
+        <!-- brick courses -->
+        <pattern id="bricks" width="128" height="56" patternUnits="userSpaceOnUse">
+          <rect width="128" height="56" fill="#141217" />
+          <path d="M0,0 H128 M0,28 H128 M0,56 H128 M32,0 V28 M96,28 V56 M96,0 V0"
+                stroke="#0e0c11" stroke-width="2.5" />
+          <path d="M64,28 V56 M0,28 V56" stroke="#0e0c11" stroke-width="2.5" />
+        </pattern>
+        <radialGradient id="lamp" cx="50%" cy="30%" r="75%">
+          <stop offset="0%" stop-color="#241f28" />
+          <stop offset="100%" stop-color="#0a0a0e" />
+        </radialGradient>
+        <linearGradient id="floor-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#121016" />
+          <stop offset="100%" stop-color="#07070a" />
+        </linearGradient>
+      </defs>
+
+      <!-- room -->
+      <rect x="0" y="0" width="1600" height="820" fill="url(#lamp)" />
+      <rect x="0" y="0" width="1600" height="820" fill="url(#bricks)" opacity="0.55" />
+      <rect x="0" y="820" width="1600" height="80" fill="url(#floor-g)" />
+      <line x1="0" y1="820" x2="1600" y2="820" stroke="#000" stroke-width="2" opacity="0.6" />
+
+      <!-- painted shop mark, dim gold -->
+      <text x="800" y="64" text-anchor="middle" fill="#4d3f22"
+            font-family="Fraunces, Georgia, serif" font-style="italic" font-size="30"
+            letter-spacing="4">Bender &amp; Sons &middot; Neon Co. &middot; est. 1962</text>
+
+      <!-- stock shelf: unlit tube blanks -->
+      <g stroke="#2c2f36" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.8">
+        <line x1="60" y1="792" x2="330" y2="792" />
+        <line x1="80" y1="780" x2="300" y2="780" />
+        <path d="M100,768 q60,-16 120,0 t110,0" />
+        <rect x="46" y="798" width="300" height="8" fill="#1c1610" stroke="none" />
+      </g>
+
+      <!-- glow backwash + floor pools live behind signs -->
+      <g id="backwash"></g>
+
+      <!-- chalk bend zone -->
+      <g id="bend-zone-marks" opacity="0.6">
+        <rect id="bend-outline" x="560" y="220" width="480" height="420" rx="14" fill="none"
+              stroke="#565664" stroke-width="2" stroke-dasharray="7 9" />
+        <text x="800" y="670" text-anchor="middle" fill="#565664"
+              font-family="Spline Sans Mono, monospace" font-size="15" letter-spacing="3">BEND YOUR TUBE HERE</text>
+        <path d="M800,220 v-26 m0,0 a10,10 0 1 1 0.1,0" fill="none" stroke="#565664" stroke-width="2" />
+      </g>
+
+      <!-- signs mount here -->
+      <g id="signs"></g>
+
+      <!-- drawing capture surface -->
+      <rect id="bend-zone" x="560" y="220" width="480" height="420" fill="transparent" />
+    </svg>
+  </div>
+
+  <div class="bench">
+    <div class="station">
+      <div class="tag">Gas</div>
+      <div class="row" role="group" aria-label="Tube gas">
+        <button class="gas" data-gas="neon"  style="--c:#ff5a26" aria-pressed="true"  aria-label="Neon, red orange"></button>
+        <button class="gas" data-gas="argon" style="--c:#4fa8ff" aria-pressed="false" aria-label="Argon and mercury, blue"></button>
+        <button class="gas" data-gas="green" style="--c:#4dff8a" aria-pressed="false" aria-label="Green phosphor"></button>
+        <button class="gas" data-gas="rose"  style="--c:#ff7edb" aria-pressed="false" aria-label="Rose phosphor"></button>
+      </div>
+    </div>
+
+    <div class="station">
+      <div class="tag">Transformer</div>
+      <div class="row" role="group" aria-label="Transformer condition">
+        <button class="xfmr" data-mode="new"   aria-pressed="true">NEW</button>
+        <button class="xfmr" data-mode="tired" aria-pressed="false">TIRED</button>
+        <button class="xfmr" data-mode="dying" aria-pressed="false">DYING</button>
+      </div>
+    </div>
+
+    <div class="station">
+      <div class="tag">Power</div>
+      <button class="knife" id="knife" aria-pressed="false" aria-label="Knife switch for your sign">
+        <span class="base"></span><span class="post l"></span><span class="post r"></span>
+        <span class="blade"></span>
+      </button>
+    </div>
+
+    <div class="station">
+      <div class="tag">Shop</div>
+      <div class="row">
+        <button class="toggle" id="hum-toggle" aria-pressed="false">HUM OFF</button>
+        <button class="scrap" id="scrap">SCRAP</button>
+      </div>
+    </div>
+
+    <p class="hint">Draw in the chalk frame, in as many strokes as the letters want. Then throw the switch.</p>
+
+    <a class="backlink" href="../../" target="_top">&larr; Catalogue</a>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const svg = document.getElementById("wall");
+  const signsRoot = document.getElementById("signs");
+  const backwash = document.getElementById("backwash");
+  const NS = "http://www.w3.org/2000/svg";
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const el = (name, attrs = {}, parent) => {
+    const n = document.createElementNS(NS, name);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (parent) parent.append(n);
+    return n;
+  };
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  /* ── Audio: the shop's electricity ──────────────────────── */
+  const audio = {
+    ctx: null, master: null, enabled: false,
+    ensure() {
+      if (this.ctx) return;
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0;
+      this.master.connect(this.ctx.destination);
+    },
+    setEnabled(on) {
+      this.enabled = on;
+      if (on) { this.ensure(); this.ctx.resume(); }
+      if (this.ctx) this.master.gain.setTargetAtTime(on ? 0.5 : 0, this.ctx.currentTime, 0.1);
+    },
+    // A transformer hum: mains fundamental plus harmonics
+    makeHum() {
+      this.ensure();
+      const g = this.ctx.createGain();
+      g.gain.value = 0;
+      const flt = this.ctx.createBiquadFilter();
+      flt.type = "lowpass"; flt.frequency.value = 900;
+      g.connect(flt).connect(this.master);
+      const parts = [[60, "sine", 1], [120, "sine", 0.55], [180, "triangle", 0.3], [240, "sawtooth", 0.1]];
+      for (const [f, type, amt] of parts) {
+        const o = this.ctx.createOscillator();
+        o.type = type; o.frequency.value = f;
+        const og = this.ctx.createGain();
+        og.gain.value = amt * 0.05;
+        o.connect(og).connect(g);
+        o.start();
+      }
+      return g;
+    },
+    strike(strength = 1) {
+      if (!this.enabled || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      const len = 0.09;
+      const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * len, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = "bandpass"; bp.frequency.value = rand(2400, 5200); bp.Q.value = 1.4;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.5 * strength, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + len);
+      src.connect(bp).connect(g).connect(this.master);
+      src.start(t);
+    },
+  };
+
+  /* ── A neon sign: layered tube + power state machine ────── */
+  const GAS = {
+    neon:  { core: "#ff5a26", hot: "#ffd9c4" },
+    argon: { core: "#4fa8ff", hot: "#dceeff" },
+    green: { core: "#4dff8a", hot: "#d8ffe6" },
+    rose:  { core: "#ff7edb", hot: "#ffe3f7" },
+  };
+
+  const signs = [];
+
+  class NeonSign {
+    constructor({ paths, color, cx, cy, poolY = 862, sway = true, hitToggle = true, label = "neon sign" }) {
+      this.color = color;
+      this.cx = cx; this.cy = cy;
+      this.mode = "new";           // new | tired | dying
+      this.state = "off";          // off | sputter | warm | on
+      this.p = 0;                  // visible power 0..1
+      this.stateT = 0;
+      this.sputterPlan = [];
+      this.nextMicro = rand(4, 9);
+      this.nextBrown = rand(1.5, 4);
+      this.theta = 0; this.omega = 0; this.swayOn = sway && !reduced;
+
+      this.group = el("g", { class: "sign-group", role: hitToggle ? "button" : "img", "aria-label": label }, signsRoot);
+      if (hitToggle) this.group.setAttribute("tabindex", "0");
+      this.inner = el("g", {}, this.group);
+      this.group.style.setProperty("--p", "0");
+
+      // wall backwash + floor pool
+      this.wash = el("ellipse", { cx, cy, rx: 300, ry: 190, fill: color.core, opacity: 0 }, backwash);
+      this.wash.style.filter = "blur(46px)";
+      this.pool = el("ellipse", { cx, cy: poolY, rx: 210, ry: 13, fill: color.core, opacity: 0 }, backwash);
+      this.pool.style.filter = "blur(9px)";
+
+      this.layers = { halo: [], glow: [], core: [], hot: [] };
+      this.setPaths(paths);
+
+      if (hitToggle) {
+        this.group.addEventListener("click", () => { this.toggle(); this.impulse(0.035); });
+        this.group.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); this.toggle(); }
+        });
+        this.group.addEventListener("pointerenter", () => this.impulse(0.012));
+      }
+      signs.push(this);
+    }
+
+    setPaths(paths) {
+      this.inner.textContent = "";
+      this.layers = { halo: [], glow: [], core: [], hot: [] };
+      this.paths = paths;
+      const mk = (d, layer, stroke, w, blur, opFactor) => {
+        const p = el("path", {
+          d, class: "layer", fill: "none", stroke,
+          "stroke-width": w, "stroke-linecap": "round", "stroke-linejoin": "round",
+        }, this.inner);
+        if (blur) p.style.filter = `blur(${blur}px)`;
+        p.style.opacity = `calc(var(--p, 0) * ${opFactor})`;
+        this.layers[layer].push(p);
+        return p;
+      };
+      for (const d of paths) {
+        // cold glass, always faintly there
+        const glass = el("path", {
+          d, class: "layer", fill: "none", stroke: "#3a4046",
+          "stroke-width": 8, "stroke-linecap": "round", "stroke-linejoin": "round",
+        }, this.inner);
+        glass.style.opacity = "0.55";
+        mk(d, "halo", this.color.core, 30, 16, 0.45);
+        mk(d, "glow", this.color.core, 15, 5, 0.8);
+        mk(d, "core", this.color.core, 7.5, 1.4, 1);
+        mk(d, "hot",  this.color.hot,  2.6, 0, 1);
+      }
+      // electrode caps close off each stroke
+      if (this.endpoints) {
+        for (const [a, b] of this.endpoints) {
+          for (const q of [a, b]) {
+            el("circle", {
+              cx: q[0].toFixed(1), cy: q[1].toFixed(1), r: 5.5, class: "layer",
+              fill: "#15181b", stroke: "#3a4046", "stroke-width": 1.5,
+            }, this.inner);
+          }
+        }
+      }
+      // one transparent fat hit path per stroke keeps the click target honest
+      for (const d of this.paths) el("path", { d, class: "hit" }, this.inner);
+    }
+
+    setColor(color) {
+      this.color = color;
+      this.layers.halo.forEach((p) => p.setAttribute("stroke", color.core));
+      this.layers.glow.forEach((p) => p.setAttribute("stroke", color.core));
+      this.layers.core.forEach((p) => p.setAttribute("stroke", color.core));
+      this.layers.hot.forEach((p) => p.setAttribute("stroke", color.hot));
+      this.wash.setAttribute("fill", color.core);
+      this.pool.setAttribute("fill", color.core);
+    }
+
+    toggle() { this.state === "off" ? this.ignite() : this.shutOff(); }
+
+    ignite() {
+      if (this.state !== "off") return;
+      this.wantsOn = true;
+      if (reduced || this.quick) { this.state = "on"; this.stateT = 0; return; }
+      this.state = "sputter";
+      this.stateT = 0;
+      const tries = Math.round(rand(2, 4));
+      this.sputterPlan = [];
+      let t = rand(0.05, 0.2);
+      for (let i = 0; i < tries; i++) {
+        this.sputterPlan.push({ at: t, len: rand(0.03, 0.09), p: rand(0.2, 0.55) });
+        t += rand(0.12, 0.4);
+      }
+      this.strikeAt = t + rand(0.04, 0.12);
+    }
+
+    shutOff() { this.state = "off"; this.stateT = 0; this.wantsOn = false; this.brown = null; }
+
+    impulse(a) { if (this.swayOn) this.omega += a * (Math.random() > 0.5 ? 1 : -1); }
+
+    flashSegments() {
+      for (const p of [...this.layers.core, ...this.layers.hot]) {
+        const L = rand(40, 200);
+        p.setAttribute("stroke-dasharray", `${L} ${rand(30, 160)}`);
+        p.setAttribute("stroke-dashoffset", String(rand(0, 300)));
+      }
+      clearTimeout(this._dashT);
+      this._dashT = setTimeout(() => {
+        for (const p of [...this.layers.core, ...this.layers.hot]) {
+          p.removeAttribute("stroke-dasharray");
+          p.removeAttribute("stroke-dashoffset");
+        }
+      }, rand(30, 80));
+    }
+
+    update(dt) {
+      this.stateT += dt;
+      let target = 0;
+      let humLevel = 0;
+
+      if (this.state === "sputter") {
+        target = 0;
+        for (const s of this.sputterPlan) {
+          if (this.stateT >= s.at && this.stateT <= s.at + s.len) {
+            target = s.p;
+            if (!s.flashed) { s.flashed = true; this.flashSegments(); audio.strike(0.4); }
+          }
+        }
+        if (this.stateT >= this.strikeAt) {
+          this.state = "warm"; this.stateT = 0;
+          audio.strike(1);
+        }
+        humLevel = target * 0.6;
+      } else if (this.state === "warm") {
+        const k = Math.min(1, this.stateT / 1.9);
+        target = 0.72 + 0.28 * k + Math.sin(this.stateT * 43) * 0.035 * (1 - k);
+        humLevel = 0.5 + 0.5 * k;
+        if (k >= 1) { this.state = "on"; this.stateT = 0; this.nextMicro = rand(4, 9); }
+      } else if (this.state === "on") {
+        target = 1 + Math.sin(this.stateT * 61) * 0.008;
+        humLevel = 1;
+
+        if (this.mode !== "new") {
+          // brownouts on a tired or dying transformer
+          this.nextBrown -= dt;
+          if (this.nextBrown <= 0 && !this.brown) {
+            const dying = this.mode === "dying";
+            this.brown = { left: dying ? rand(0.12, 0.5) : rand(0.05, 0.16), depth: dying ? rand(0.1, 0.5) : rand(0.55, 0.8) };
+            if (dying && Math.random() < 0.22) this.brown.kill = true;
+            this.flashSegments();
+          }
+          if (this.brown) {
+            this.brown.left -= dt;
+            const stutter = Math.sin(this.stateT * 90) > 0 ? 1 : 0.35;
+            target = this.brown.depth * stutter;
+            humLevel = 0.4 + stutter * 0.9; // the transformer complains
+            if (this.brown.left <= 0) {
+              const killed = this.brown.kill;
+              this.brown = null;
+              this.nextBrown = this.mode === "dying" ? rand(0.9, 3.2) : rand(4, 9);
+              if (killed) {
+                this.state = "off"; this.p = 0;
+                setTimeout(() => { if (this.wantsOn) this.ignite(); }, rand(400, 1400));
+              }
+            }
+          }
+        }
+        // healthy tubes still tic occasionally
+        if (!this.brown) {
+          this.nextMicro -= dt;
+          if (this.nextMicro <= 0) { target *= 0.86; if (this.nextMicro < -0.05) this.nextMicro = rand(4, 9); }
+        }
+      }
+
+      // slew power toward target (fast up, slower decay tail)
+      const rate = target > this.p ? 22 : 10;
+      this.p += (target - this.p) * Math.min(1, rate * dt);
+      this.group.style.setProperty("--p", this.p.toFixed(3));
+      this.wash.setAttribute("opacity", (this.p * 0.34).toFixed(3));
+      this.pool.setAttribute("opacity", (this.p * 0.3).toFixed(3));
+
+      // sway
+      if (this.swayOn && (Math.abs(this.theta) > 1e-4 || Math.abs(this.omega) > 1e-4)) {
+        this.omega += (-9 * this.theta - 1.6 * this.omega) * dt;
+        this.theta += this.omega * dt;
+        this.group.setAttribute("transform",
+          `rotate(${(this.theta * 57.3).toFixed(3)} ${this.cx} ${this.cy - 160})`);
+      }
+
+      // audio follow
+      if (audio.enabled) {
+        if (!this.hum) this.hum = audio.makeHum();
+        const g = humLevel * this.p * 0.9 + (this.brown ? 0.25 : 0);
+        this.hum.gain.setTargetAtTime(Math.min(1.4, g), audio.ctx.currentTime, 0.06);
+      }
+    }
+  }
+
+  /* ── The wall pieces ────────────────────────────────────── */
+
+  // OPEN, red, top left
+  const open = new NeonSign({
+    label: "OPEN sign, red",
+    color: GAS.neon, cx: 320, cy: 210,
+    paths: [
+      "M210,150 a38,55 0 1 0 0.1,0",
+      "M292,265 V150 h28 a29,29 0 0 1 0,58 h-28",
+      "M432,150 h-48 v115 h48 M384,206 h40",
+      "M462,265 V150 l56,115 V150",
+    ],
+  });
+
+  // heart, rose, mid left
+  const heart = new NeonSign({
+    label: "Heart sign, pink",
+    color: GAS.rose, cx: 300, cy: 545,
+    paths: [
+      "M300,640 C245,575 215,535 235,492 C255,455 298,466 300,505 C302,466 345,455 365,492 C385,535 355,575 300,640",
+    ],
+  });
+
+  // martini, argon blue + green olive, right
+  const martini = new NeonSign({
+    label: "Martini glass sign, blue with a green olive",
+    color: GAS.argon, cx: 1275, cy: 380,
+    paths: [
+      "M1160,255 H1390",
+      "M1172,268 L1275,392 L1378,268",
+      "M1275,392 V535",
+      "M1215,545 Q1275,528 1335,545",
+    ],
+  });
+  // the olive is its own tiny sign so it can blink on its own clock
+  const olive = new NeonSign({
+    label: "Olive on a pick",
+    color: GAS.green, cx: 1252, cy: 330, sway: false, hitToggle: false,
+    paths: [
+      "M1252,332 a17,17 0 1 0 0.1,0",
+      "M1264,318 L1310,272",
+    ],
+  });
+  olive.pool.remove(); // shares the martini's floor pool
+
+  // 24 HR, blue, lower right, born on a dying transformer
+  const hr24 = new NeonSign({
+    label: "24 HR sign, ailing",
+    color: GAS.argon, cx: 1300, cy: 720,
+    paths: [
+      "M1152,668 h52 v46 h-52 v46 h52",
+      "M1232,668 v48 h50 M1282,668 v92",
+      "M1368,668 v92 M1420,668 v92 M1368,712 h52",
+      "M1448,760 v-92 h38 a24,24 0 0 1 0,48 h-38 M1462,716 l34,44",
+    ],
+  });
+  hr24.mode = "dying";
+
+  /* ── Your tube: drawing on the wall ─────────────────────── */
+  const bendZone = document.getElementById("bend-zone");
+  const bendMarks = document.getElementById("bend-zone-marks");
+  const knife = document.getElementById("knife");
+
+  const user = new NeonSign({
+    label: "Your sign",
+    color: GAS.neon, cx: 800, cy: 430, sway: false, hitToggle: false,
+    paths: [],
+  });
+  let userStrokes = [];
+  let userEnds = [];
+
+  const pt = (e) => {
+    const m = svg.getScreenCTM().inverse();
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m);
+    return [p.x, p.y];
+  };
+
+  // Catmull-Rom through the sampled points -> cubic beziers
+  function smoothPath(pts) {
+    if (pts.length < 2) return null;
+    if (pts.length === 2) return `M${pts[0]} L${pts[1]}`;
+    let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    return d;
+  }
+
+  let drawing = null, livePath = null;
+
+  bendZone.addEventListener("pointerdown", (e) => {
+    if (userStrokes.length >= 14) return;
+    e.preventDefault();
+    bendZone.setPointerCapture(e.pointerId);
+    // bending a live tube is bad practice
+    if (user.state !== "off") { user.shutOff(); knife.setAttribute("aria-pressed", "false"); }
+    drawing = [pt(e)];
+    livePath = el("path", {
+      fill: "none", stroke: "#4a525a", "stroke-width": 8,
+      "stroke-linecap": "round", "stroke-linejoin": "round", opacity: "0.8",
+    }, signsRoot);
+  });
+
+  bendZone.addEventListener("pointermove", (e) => {
+    if (!drawing) return;
+    const p = pt(e);
+    const last = drawing[drawing.length - 1];
+    if (Math.hypot(p[0] - last[0], p[1] - last[1]) < 5) return;
+    drawing.push(p);
+    livePath.setAttribute("d", `M${drawing.map((q) => q.map((v) => v.toFixed(1)).join(",")).join(" L")}`);
+  });
+
+  function endStroke() {
+    if (!drawing) return;
+    const d = smoothPath(drawing);
+    livePath.remove();
+    livePath = null;
+    if (d && drawing.length > 2) {
+      userStrokes.push(d);
+      userEnds.push([drawing[0], drawing[drawing.length - 1]]);
+      user.endpoints = userEnds;
+      user.setPaths(userStrokes);
+      bendMarks.style.opacity = "0.14";
+    }
+    drawing = null;
+  }
+  bendZone.addEventListener("pointerup", endStroke);
+  bendZone.addEventListener("pointercancel", endStroke);
+
+  /* ── Bench wiring ───────────────────────────────────────── */
+  knife.addEventListener("click", () => {
+    const on = knife.getAttribute("aria-pressed") !== "true";
+    knife.setAttribute("aria-pressed", String(on));
+    if (on) {
+      if (userStrokes.length) user.ignite();
+    } else user.shutOff();
+  });
+
+  document.querySelectorAll(".gas").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".gas").forEach((b) => b.setAttribute("aria-pressed", "false"));
+      btn.setAttribute("aria-pressed", "true");
+      user.setColor(GAS[btn.dataset.gas]);
+    }));
+
+  document.querySelectorAll(".xfmr").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".xfmr").forEach((b) => b.setAttribute("aria-pressed", "false"));
+      btn.setAttribute("aria-pressed", "true");
+      user.mode = btn.dataset.mode;
+    }));
+
+  document.getElementById("scrap").addEventListener("click", () => {
+    userStrokes = [];
+    userEnds = [];
+    user.endpoints = [];
+    user.shutOff();
+    user.setPaths([]);
+    knife.setAttribute("aria-pressed", "false");
+    bendMarks.style.opacity = "0.6";
+  });
+
+  const humToggle = document.getElementById("hum-toggle");
+  humToggle.addEventListener("click", () => {
+    const on = humToggle.getAttribute("aria-pressed") !== "true";
+    humToggle.setAttribute("aria-pressed", String(on));
+    humToggle.textContent = on ? "HUM ON" : "HUM OFF";
+    audio.setEnabled(on);
+  });
+
+  /* ── Shop clock ─────────────────────────────────────────── */
+  let last = null;
+  let oliveClock = 0;
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+
+    for (const s of signs) s.update(dt);
+
+    // the olive blinks on the martini's rhythm
+    oliveClock += dt;
+    if (martini.state === "on") {
+      if (oliveClock > 1.5) {
+        oliveClock = 0;
+        if (olive.state === "off") { olive.ignite(); olive.quick = true; }
+        else olive.shutOff();
+      }
+    } else if (olive.state !== "off") olive.shutOff();
+  }
+  requestAnimationFrame(frame);
+
+  /* ── Opening night: the shop lights itself ──────────────── */
+  setTimeout(() => open.ignite(), 500);
+  setTimeout(() => martini.ignite(), 1700);
+  setTimeout(() => heart.ignite(), 3100);
+  setTimeout(() => hr24.ignite(), 4200);
+})();
+</script>
+</body>
+</html>
