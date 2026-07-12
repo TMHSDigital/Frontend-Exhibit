@@ -1,0 +1,118 @@
+<!doctype html>
+<!--
+  Source for the social preview card (assets/og/og-image.png).
+  To regenerate: serve the repo root, open this page in a browser
+  at exactly 1200x630, and screenshot the viewport.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>OG card — Frontend Exhibit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; box-sizing: border-box; }
+
+  body {
+    width: 1200px;
+    height: 630px;
+    overflow: hidden;
+    position: relative;
+    background: #0b0b0f;
+    color: #c9c9d4;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    text-align: center;
+  }
+
+  /* Halogen spotlight on the wall */
+  body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 44% 42% at 50% 44%,
+        rgb(217 164 65 / 0.14), rgb(217 164 65 / 0.04) 55%, transparent 75%);
+  }
+
+  /* Film grain */
+  body::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .hook {
+    position: relative;
+    width: 1px;
+    height: 86px;
+    background: linear-gradient(to bottom, transparent, #8a6a2f);
+    margin-bottom: 34px;
+  }
+  .hook::after {
+    content: "";
+    position: absolute;
+    bottom: -5px;
+    left: -4px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1px solid #8a6a2f;
+  }
+
+  .wing {
+    position: relative;
+    font-family: "Spline Sans Mono", ui-monospace, monospace;
+    font-size: 17px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: #d9a441;
+    margin-bottom: 22px;
+  }
+
+  h1 {
+    position: relative;
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 500;
+    font-size: 108px;
+    font-variation-settings: "opsz" 100;
+    letter-spacing: 0.01em;
+    color: #f2f2f6;
+    line-height: 1.05;
+  }
+
+  .tagline {
+    position: relative;
+    margin-top: 26px;
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 300;
+    font-style: italic;
+    font-size: 31px;
+    color: #8f8f9e;
+  }
+
+  .colophon {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 38px;
+    font-family: "Spline Sans Mono", ui-monospace, monospace;
+    font-size: 16px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #6f6f7e;
+  }
+</style>
+</head>
+<body>
+  <span class="hook"></span>
+  <div class="wing">West wing &middot; Permanent collection</div>
+  <h1>Frontend Exhibit</h1>
+  <p class="tagline">a living gallery of frontend craft</p>
+  <div class="colophon">tmhsdigital.github.io/Frontend-Exhibit</div>
+</body>
+</html>

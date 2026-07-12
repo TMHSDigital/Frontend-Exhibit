@@ -6,6 +6,21 @@
 <meta name="color-scheme" content="dark" />
 <title>Frontend Exhibit — the gallery</title>
 <meta name="description" content="A living gallery of bleeding-edge frontend craft. Themes, micro-interactions, 3D, typography in motion." />
+<meta name="theme-color" content="#0b0b0f" />
+<link rel="canonical" href="https://tmhsdigital.github.io/Frontend-Exhibit/" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Frontend Exhibit — the gallery" />
+<meta property="og:description" content="A living gallery of bleeding-edge frontend craft. Themes, micro-interactions, 3D, typography in motion." />
+<meta property="og:url" content="https://tmhsdigital.github.io/Frontend-Exhibit/" />
+<meta property="og:site_name" content="Frontend Exhibit" />
+<meta property="og:image" content="https://tmhsdigital.github.io/Frontend-Exhibit/assets/og/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Frontend Exhibit — a living gallery of frontend craft" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Frontend Exhibit — the gallery" />
+<meta name="twitter:description" content="A living gallery of bleeding-edge frontend craft. Themes, micro-interactions, 3D, typography in motion." />
+<meta name="twitter:image" content="https://tmhsdigital.github.io/Frontend-Exhibit/assets/og/og-image.png" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0b0f'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='Georgia,serif' font-size='20' fill='%23d9a441'%3E✦%3C/text%3E%3C/svg%3E" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,6 +36,7 @@
     --hub-ledger: #0d0d11;
     --hub-gilt: #d9a441;          /* halogen spotlight */
     --hub-gilt-dim: #8a6a2f;
+    --hub-accent: var(--hub-gilt); /* re-tinted per exhibit from the manifest */
     --hub-plaque: #c9c9d4;
     --hub-whisper: #6f6f7e;
     --hub-hairline: #232330;
@@ -115,7 +131,7 @@
   .piece {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: var(--fe-space-sm);
+    gap: 2px var(--fe-space-sm);
     align-items: baseline;
     width: 100%;
     padding: var(--fe-space-sm) var(--fe-space-lg);
@@ -155,10 +171,11 @@
   .piece:hover { background: rgb(255 255 255 / 0.03); }
 
   .piece[aria-current="true"] {
-    border-left-color: var(--hub-gilt);
-    background: linear-gradient(90deg, rgb(217 164 65 / 0.08), transparent 70%);
+    border-left-color: var(--hub-accent);
+    background: linear-gradient(90deg,
+      color-mix(in srgb, var(--hub-accent) 7%, transparent), transparent 70%);
   }
-  .piece[aria-current="true"] .no { color: var(--hub-gilt); }
+  .piece[aria-current="true"] .no { color: var(--hub-accent); }
 
   .piece:focus-visible {
     outline: 2px solid var(--hub-gilt);
@@ -239,6 +256,23 @@
   }
   .open-full:hover, .open-full:focus-visible { background: rgb(217 164 65 / 0.12); }
   .open-full[hidden] { display: none; }
+
+  .step {
+    background: none;
+    border: 1px solid var(--hub-hairline);
+    border-radius: var(--fe-radius-sm);
+    color: var(--hub-plaque);
+    font-family: var(--font-catalogue);
+    font-size: var(--fe-text-xs);
+    padding: 0.35em 0.7em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color var(--fe-duration-fast) var(--fe-ease-out),
+                color var(--fe-duration-fast) var(--fe-ease-out);
+  }
+  .step:hover, .step:focus-visible { border-color: var(--hub-gilt-dim); color: var(--hub-gilt); }
+  .step:focus-visible { outline: 2px solid var(--hub-gilt); outline-offset: 1px; }
+  .step[hidden] { display: none; }
 
   .viewport {
     position: relative;
@@ -375,6 +409,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .bare-wall::before { animation: none; }
+    .viewport iframe, .bare-wall, .ledger, .scrim { transition: none; }
   }
 </style>
 </head>
@@ -390,6 +425,13 @@
     </header>
 
     <nav class="catalogue" aria-label="Exhibits">
+      <noscript>
+        <div class="vacant">
+          The catalogue needs JavaScript to read the exhibit registry.
+          Enable it, or browse the pieces directly in the
+          <a href="https://github.com/TMHSDigital/Frontend-Exhibit/tree/main/exhibits">repository</a>.
+        </div>
+      </noscript>
       <ul id="catalogue-list"></ul>
       <div class="vacant" id="vacant-note" hidden>
         No exhibits are hung yet. The first pieces are being framed —
@@ -400,6 +442,7 @@
 
     <footer class="colophon">
       <a href="https://github.com/TMHSDigital/Frontend-Exhibit">Source</a>
+      <span id="piece-count"></span>
       <span>GPL-3.0</span>
     </footer>
   </aside>
@@ -412,6 +455,10 @@
               aria-expanded="false" aria-controls="ledger">Catalogue</button>
       <span class="now-showing">Now showing</span>
       <span class="current" id="current-title">—</span>
+      <button class="step" id="prev-piece" hidden title="Previous exhibit (left arrow)"
+              aria-label="Previous exhibit">←</button>
+      <button class="step" id="next-piece" hidden title="Next exhibit (right arrow)"
+              aria-label="Next exhibit">→</button>
       <a class="open-full" id="open-full" target="_blank" rel="noopener" hidden>
         Open full screen ↗
       </a>
@@ -444,6 +491,11 @@
   const openFull = document.getElementById("open-full");
   const drawerToggle = document.getElementById("drawer-toggle");
   const scrim = document.getElementById("scrim");
+  const prevPiece = document.getElementById("prev-piece");
+  const nextPiece = document.getElementById("next-piece");
+  const pieceCount = document.getElementById("piece-count");
+
+  const DEFAULT_ACCENT = "#d9a441";
 
   const includeDrafts = new URLSearchParams(location.search).has("drafts");
   let exhibits = [];
@@ -465,6 +517,11 @@
     currentTitle.textContent = exhibit.title;
     openFull.href = exhibit.entry;
     openFull.hidden = false;
+    prevPiece.hidden = nextPiece.hidden = exhibits.length < 2;
+
+    const accent = /^#[0-9a-fA-F]{6}$/.test(exhibit.accentColor ?? "")
+      ? exhibit.accentColor : DEFAULT_ACCENT;
+    document.documentElement.style.setProperty("--hub-accent", accent);
 
     frame.classList.remove("lit");
     bareWall.classList.add("dimmed");
@@ -481,6 +538,8 @@
     }
     currentTitle.textContent = "—";
     openFull.hidden = true;
+    prevPiece.hidden = nextPiece.hidden = true;
+    document.documentElement.style.removeProperty("--hub-accent");
     frame.classList.remove("lit");
     frame.removeAttribute("src");
     bareWall.classList.remove("dimmed");
@@ -525,13 +584,31 @@
       list.append(li);
     });
     vacantNote.hidden = exhibits.length > 0;
+    pieceCount.textContent = exhibits.length
+      ? `${exhibits.length} piece${exhibits.length === 1 ? "" : "s"}`
+      : "";
+  }
+
+  function step(offset) {
+    if (!exhibits.length) return;
+    const slug = slugFromHash();
+    const at = exhibits.findIndex((e) => e.slug === slug);
+    const next = at === -1
+      ? (offset > 0 ? 0 : exhibits.length - 1)
+      : (at + offset + exhibits.length) % exhibits.length;
+    location.hash = `#/${exhibits[next].slug}`;
   }
 
   drawerToggle.addEventListener("click", () =>
     setDrawer(!hub.classList.contains("ledger-open")));
   scrim.addEventListener("click", () => setDrawer(false));
+  prevPiece.addEventListener("click", () => step(-1));
+  nextPiece.addEventListener("click", () => step(1));
   addEventListener("keydown", (e) => {
     if (e.key === "Escape") setDrawer(false);
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === "ArrowLeft") step(-1);
+    if (e.key === "ArrowRight") step(1);
   });
   addEventListener("hashchange", route);
 
