@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>Blueprint — Frontend Exhibit</title>
+<meta name="description" content="A technical drawing that constructs itself on scroll, stroke by stroke in draftsman order, then lifts off the paper into a rotatable wireframe model." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:ital,wght@0,400;0,500;1,400&family=Fraunces:ital,opsz,wght@1,9..144,300..500&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --room: #0b0b0f;
+    --cyan-deep: #0c2c55;
+    --cyan: #12386a;
+    --ice: #dfeaf5;
+    --ice-dim: #9db8d4;
+    --faint: #4c6d97;
+    --release: #ff6a5a;
+    --mono: "Spline Sans Mono", ui-monospace, monospace;
+  }
+
+  * { margin: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--room);
+    color: var(--ice-dim);
+    font-family: var(--mono);
+  }
+
+  .track { height: 780vh; }
+
+  .stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    perspective: 1400px;
+  }
+
+  /* the sheet */
+  .sheet {
+    position: relative;
+    width: min(94vw, calc(94vh * 1200 / 850));
+    aspect-ratio: 1200 / 850;
+    background:
+      radial-gradient(ellipse 120% 100% at 30% 20%, var(--cyan), var(--cyan-deep) 78%);
+    box-shadow: 0 30px 80px rgb(0 0 0 / 0.65), inset 0 0 120px rgb(4 16 36 / 0.7);
+    transition: filter 400ms ease;
+  }
+  .sheet::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.06;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .sheet svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* drafting linework defaults */
+  svg text {
+    font-family: var(--mono);
+    fill: var(--ice);
+    letter-spacing: 0.08em;
+  }
+  .hud-corner {
+    position: fixed;
+    z-index: 20;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: #5d7292;
+    text-transform: uppercase;
+  }
+  #hud-phase { top: 18px; left: 22px; }
+  #hud-coord { top: 18px; right: 22px; font-variant-numeric: tabular-nums; }
+  #hud-hint  {
+    bottom: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 2.2em; align-items: baseline; white-space: nowrap;
+  }
+  #hud-hint .drag-hint { opacity: 0; transition: opacity 500ms ease; color: #8fb4de; }
+  #hud-hint a { color: #5d7292; text-decoration: none; }
+  #hud-hint a:hover, #hud-hint a:focus-visible { color: var(--ice); }
+
+  /* rotate-the-model capture layer */
+  #turntable {
+    position: absolute;
+    inset: 0;
+    display: none;
+    cursor: grab;
+    touch-action: pan-y;
+  }
+  #turntable.grabbing { cursor: grabbing; }
+
+  .stamp {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sheet { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="track" id="track">
+  <div class="stage" id="stage">
+    <div class="sheet" id="sheet">
+      <svg viewBox="0 0 1200 850" id="dwg" aria-label="A blueprint of a municipal water tower drawing itself as the page scrolls, then lifting into a rotatable wireframe model.">
+        <defs>
+          <clipPath id="cl-center"><rect id="cl-center-r" x="424" y="160" width="12" height="0" /></clipPath>
+          <clipPath id="cl-riser"><rect id="cl-riser-r" x="424" y="388" width="12" height="0" /></clipPath>
+        </defs>
+
+        <!-- ═══ phase 0 · sheet furniture ═══ -->
+        <g id="g-border" fill="none" stroke="var(--ice)" stroke-width="1.6">
+          <rect id="b-outer" x="40" y="40" width="1120" height="770" />
+          <rect id="b-inner" x="52" y="52" width="1096" height="746" stroke-width="0.7" />
+        </g>
+
+        <g id="g-titleblock" fill="none" stroke="var(--ice)" stroke-width="1">
+          <rect id="tb-box" x="830" y="676" width="318" height="122" />
+          <line id="tb-l1" x1="830" y1="712" x2="1148" y2="712" />
+          <line id="tb-l2" x1="830" y1="742" x2="1148" y2="742" />
+          <line id="tb-l3" x1="830" y1="770" x2="1148" y2="770" />
+          <line id="tb-v1" x1="1010" y1="742" x2="1010" y2="798" />
+        </g>
+        <g id="g-titletext" font-size="11">
+          <text id="tt-1" x="842" y="699" font-size="14" letter-spacing="0.14em"></text>
+          <text id="tt-2" x="842" y="731" fill="var(--ice-dim)"></text>
+          <text id="tt-3" x="842" y="762" fill="var(--ice-dim)"></text>
+          <text id="tt-4" x="842" y="790" fill="var(--ice-dim)"></text>
+          <text id="tt-5" x="1022" y="762" fill="var(--ice-dim)"></text>
+          <text id="tt-6" x="1022" y="790" fill="var(--ice-dim)"></text>
+        </g>
+
+        <!-- ═══ phase 1 · datum ═══ -->
+        <g id="g-datum">
+          <line id="d-ground" x1="150" y1="700" x2="900" y2="700" stroke="var(--ice)" stroke-width="2.6" fill="none" />
+          <g clip-path="url(#cl-center)">
+            <line id="d-center" x1="430" y1="164" x2="430" y2="742" stroke="var(--ice-dim)"
+                  stroke-width="1" stroke-dasharray="18 5 3 5" fill="none" />
+          </g>
+        </g>
+
+        <!-- ═══ phase 2 · construction + structure ═══ -->
+        <g id="g-constr" fill="none" stroke="var(--faint)" stroke-width="0.8">
+          <circle id="c-tank" cx="430" cy="316" r="120" />
+          <line id="c-x1" x1="336" y1="222" x2="524" y2="410" />
+          <line id="c-x2" x1="524" y1="222" x2="336" y2="410" />
+        </g>
+
+        <g id="g-structure" fill="none" stroke="var(--ice)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- tank shell -->
+          <path id="s-tank" d="M334,388 V244 M526,244 V388 M334,388 q96,26 192,0" />
+          <line id="s-topline" x1="334" y1="244" x2="526" y2="244" />
+          <!-- roof cone + finial -->
+          <path id="s-roof" d="M334,244 L430,196 L526,244" />
+          <line id="s-finial" x1="430" y1="196" x2="430" y2="178" />
+          <!-- legs -->
+          <path id="s-leg1" d="M376,388 L298,700" />
+          <path id="s-leg2" d="M484,388 L562,700" />
+          <!-- riser pipe -->
+          <g clip-path="url(#cl-riser)">
+            <line id="s-riser" x1="430" y1="392" x2="430" y2="700" stroke-width="1.4" stroke-dasharray="10 6" />
+          </g>
+        </g>
+
+        <!-- ═══ phase 3 · detail ═══ -->
+        <g id="g-detail" fill="none" stroke="var(--ice)" stroke-width="1.4" stroke-linecap="round">
+          <!-- girts -->
+          <line id="dt-girt1" x1="350" y1="492" x2="510" y2="492" />
+          <line id="dt-girt2" x1="324" y1="596" x2="536" y2="596" />
+          <!-- x bracing -->
+          <path id="dt-x1" d="M363,440 L497,492 M497,440 L363,492" stroke-width="1.1" />
+          <path id="dt-x2" d="M350,492 L536,596 M510,492 L324,596" stroke-width="1.1" />
+          <path id="dt-x3" d="M324,596 L562,700 M536,596 L298,700" stroke-width="1.1" />
+          <!-- footings -->
+          <path id="dt-foot1" d="M276,700 h44 v18 h-44 z" />
+          <path id="dt-foot2" d="M540,700 h44 v18 h-44 z" />
+          <!-- ladder -->
+          <path id="dt-ladder" d="M600,700 V244 M614,700 V244" stroke-width="1.1" />
+          <path id="dt-rungs" d="M600,664 h14 M600,628 h14 M600,592 h14 M600,556 h14 M600,520 h14 M600,484 h14 M600,448 h14 M600,412 h14 M600,376 h14 M600,340 h14 M600,304 h14 M600,268 h14" stroke-width="1.1" />
+          <!-- tank bands -->
+          <path id="dt-band1" d="M334,292 q96,22 192,0" stroke-width="0.9" />
+          <path id="dt-band2" d="M334,340 q96,24 192,0" stroke-width="0.9" />
+        </g>
+
+        <!-- ═══ phase 4 · hatching ═══ -->
+        <g id="g-hatch" fill="none" stroke="var(--ice-dim)" stroke-width="0.9">
+          <path id="h-earth" d="M170,700 l-14,16 M205,700 l-14,16 M240,700 l-14,16 M275,700 l-14,16 M340,700 l-14,16 M375,700 l-14,16 M410,700 l-14,16 M445,700 l-14,16 M480,700 l-14,16 M515,700 l-14,16 M615,700 l-14,16 M650,700 l-14,16 M685,700 l-14,16 M720,700 l-14,16 M755,700 l-14,16 M790,700 l-14,16 M825,700 l-14,16 M860,700 l-14,16 M895,700 l-14,16" />
+          <path id="h-foot1" d="M280,704 l14,-4 M276,712 l30,-10 M282,718 l32,-11 M296,718 l24,-8" stroke-width="0.7" />
+          <path id="h-foot2" d="M544,704 l14,-4 M540,712 l30,-10 M546,718 l32,-11 M560,718 l24,-8" stroke-width="0.7" />
+        </g>
+
+        <!-- ═══ phase 5 · dimensions & annotations ═══ -->
+        <g id="g-dims" fill="none" stroke="var(--ice-dim)" stroke-width="0.9">
+          <!-- overall height, left -->
+          <line id="dim-h-e1" x1="418" y1="196" x2="242" y2="196" />
+          <line id="dim-h-e2" x1="290" y1="700" x2="242" y2="700" />
+          <path id="dim-h-l"  d="M250,196 V700 M250,196 l-4,10 8,0 z M250,700 l-4,-10 8,0 z" />
+          <!-- tank diameter, top -->
+          <line id="dim-d-e1" x1="334" y1="238" x2="334" y2="152" />
+          <line id="dim-d-e2" x1="526" y1="238" x2="526" y2="152" />
+          <path id="dim-d-l"  d="M334,160 H526 M334,160 l10,-4 0,8 z M526,160 l-10,-4 0,8 z" />
+          <!-- leg spread, bottom -->
+          <line id="dim-s-e1" x1="298" y1="706" x2="298" y2="768" />
+          <line id="dim-s-e2" x1="562" y1="706" x2="562" y2="768" />
+          <path id="dim-s-l"  d="M298,760 H562 M298,760 l10,-4 0,8 z M562,760 l-10,-4 0,8 z" />
+          <!-- tank height, right -->
+          <line id="dim-t-e1" x1="532" y1="244" x2="700" y2="244" />
+          <line id="dim-t-e2" x1="532" y1="388" x2="700" y2="388" />
+          <path id="dim-t-l"  d="M692,244 V388 M692,244 l-4,10 8,0 z M692,388 l-4,-10 8,0 z" />
+          <!-- leaders -->
+          <path id="ld-1" d="M508,300 L664,278 h10" />
+          <path id="ld-2" d="M300,692 L240,648 h-14" />
+          <path id="ld-3" d="M420,540 L700,560 h10" />
+        </g>
+        <g id="g-dimtext" font-size="12">
+          <text id="dx-h" x="238" y="452" transform="rotate(-90 238 452)" text-anchor="middle"></text>
+          <text id="dx-d" x="430" y="148" text-anchor="middle"></text>
+          <text id="dx-s" x="430" y="780" text-anchor="middle"></text>
+          <text id="dx-t" x="704" y="320" transform="rotate(90 704 320)" text-anchor="middle"></text>
+          <text id="an-1" x="680" y="282" font-size="11"></text>
+          <text id="an-2" x="62" y="640" font-size="11" text-anchor="start"></text>
+          <text id="an-3" x="716" y="564" font-size="11"></text>
+          <text id="cap-title" x="430" y="748" text-anchor="middle" font-size="13" letter-spacing="0.22em"></text>
+          <text id="nt-0" x="830" y="120" font-size="11" letter-spacing="0.18em"></text>
+          <text id="nt-1" x="830" y="142" font-size="10.5" fill="var(--ice-dim)"></text>
+          <text id="nt-2" x="830" y="162" font-size="10.5" fill="var(--ice-dim)"></text>
+          <text id="nt-3" x="830" y="182" font-size="10.5" fill="var(--ice-dim)"></text>
+        </g>
+
+        <!-- ═══ phase 6 · release stamp ═══ -->
+        <g id="g-stamp" class="stamp" opacity="0" transform="rotate(-8)">
+          <rect x="856" y="560" width="250" height="64" fill="none" stroke="var(--release)" stroke-width="2.4" rx="6" />
+          <text x="981" y="588" text-anchor="middle" fill="var(--release)" font-size="15" letter-spacing="0.2em">RELEASED FOR</text>
+          <text x="981" y="610" text-anchor="middle" fill="var(--release)" font-size="15" letter-spacing="0.2em">CONSTRUCTION</text>
+        </g>
+
+        <!-- pen crosshair -->
+        <g id="g-pen" opacity="0" stroke="var(--ice)" fill="none" stroke-width="0.8">
+          <line id="pen-h" x1="-14" y1="0" x2="14" y2="0" />
+          <line id="pen-v" x1="0" y1="-14" x2="0" y2="14" />
+          <circle id="pen-c" r="4.5" />
+        </g>
+
+        <!-- ═══ phase 7 · the model lifts off ═══ -->
+        <ellipse id="model-shadow" cx="430" cy="710" rx="0" ry="0" fill="#04101f" opacity="0" />
+        <g id="g-model" fill="none" stroke="#eaf4ff" stroke-width="1.6"
+           stroke-linecap="round" opacity="0"
+           style="filter: drop-shadow(0 0 6px rgb(140 190 255 / 0.55))"></g>
+      </svg>
+
+      <div id="turntable" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
+
+<div class="hud-corner" id="hud-phase">PH 01 &middot; SHEET</div>
+<div class="hud-corner" id="hud-coord">E 0.0 &middot; N 0.0</div>
+<div class="hud-corner" id="hud-hint">
+  <span>scroll to draft</span>
+  <span class="drag-hint" id="drag-hint">drag to turn the model</span>
+  <a href="../../" target="_top">&larr; catalogue</a>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+  const win = (p, a, b) => clamp01((p - a) / (b - a));
+
+  /* ── the plotter: strokes ink in declared order ─────────── */
+  const strokes = [];   // {el, L, a, b} solid linework
+  const clips = [];     // {rect, y0, y1, a, b} dashed linework revealed by clip
+  const texts = [];     // {el, full, a, b}
+
+  function seq(ids, a, b) {
+    const els = ids.map($);
+    const Ls = els.map((e) => e.getTotalLength());
+    const total = Ls.reduce((s, v) => s + v, 0);
+    let acc = a;
+    els.forEach((el, i) => {
+      const span = (b - a) * (Ls[i] / total);
+      el.style.strokeDasharray = `${Ls[i]}`;
+      el.style.strokeDashoffset = `${Ls[i]}`;
+      strokes.push({ el, L: Ls[i], a: acc, b: acc + span });
+      acc += span;
+    });
+  }
+  function clip(rectId, y0, y1, a, b) {
+    const rect = $(rectId);
+    rect.setAttribute("height", "0");
+    clips.push({ rect, y0, y1, a, b });
+  }
+  function type(id, full, a, b) {
+    texts.push({ el: $(id), full, a, b });
+  }
+
+  /* ── the drawing schedule ───────────────────────────────── */
+  // phase 0-1 · sheet, title block, datum          0.00 - 0.11
+  seq(["b-outer", "b-inner"], 0.005, 0.045);
+  seq(["tb-box", "tb-l1", "tb-l2", "tb-l3", "tb-v1"], 0.045, 0.062);
+  type("tt-1", "MUNICIPAL WATER TOWER", 0.055, 0.075);
+  type("tt-2", "WEST ELEVATION", 0.062, 0.078);
+  type("tt-3", "SCALE 1/4\" = 1'-0\"", 0.068, 0.082);
+  type("tt-4", "DWG NO. FE-009", 0.072, 0.088);
+  type("tt-5", "DRAWN: CLAUDE", 0.076, 0.09);
+  type("tt-6", "REV A  ·  07/12/26", 0.08, 0.094);
+  seq(["d-ground"], 0.075, 0.095);
+  clip("cl-center-r", 164, 742, 0.088, 0.11);
+
+  // phase 2 · construction + structure             0.11 - 0.30
+  seq(["c-tank", "c-x1", "c-x2"], 0.11, 0.14);
+  seq(["s-tank", "s-topline", "s-roof", "s-finial"], 0.14, 0.215);
+  seq(["s-leg1", "s-leg2"], 0.215, 0.265);
+  clip("cl-riser-r", 392, 700, 0.265, 0.30);
+
+  // phase 3 · detail                               0.30 - 0.50
+  seq(["dt-girt1", "dt-girt2", "dt-x1", "dt-x2", "dt-x3"], 0.30, 0.375);
+  seq(["dt-foot1", "dt-foot2"], 0.375, 0.40);
+  seq(["dt-ladder", "dt-rungs"], 0.40, 0.465);
+  seq(["dt-band1", "dt-band2"], 0.465, 0.50);
+
+  // phase 4 · hatching                             0.50 - 0.62
+  seq(["h-earth"], 0.50, 0.575);
+  seq(["h-foot1", "h-foot2"], 0.575, 0.62);
+
+  // phase 5 · dimensions & annotations             0.62 - 0.82
+  seq(["dim-h-e1", "dim-h-e2", "dim-h-l"], 0.62, 0.655);
+  type("dx-h", "42'-0\"", 0.648, 0.66);
+  seq(["dim-d-e1", "dim-d-e2", "dim-d-l"], 0.655, 0.685);
+  type("dx-d", "16'-0\"", 0.678, 0.69);
+  seq(["dim-s-e1", "dim-s-e2", "dim-s-l"], 0.685, 0.712);
+  type("dx-s", "22'-0\"", 0.705, 0.717);
+  seq(["dim-t-e1", "dim-t-e2", "dim-t-l"], 0.712, 0.738);
+  type("dx-t", "12'-0\"", 0.731, 0.743);
+  seq(["ld-1"], 0.738, 0.75);
+  type("an-1", "RIVETED STEEL SHELL", 0.748, 0.762);
+  seq(["ld-2"], 0.75, 0.76);
+  type("an-2", "CAST CONC. FOOTING (TYP.)", 0.758, 0.772);
+  seq(["ld-3"], 0.76, 0.77);
+  type("an-3", "STEEL LATTICE LEG (TYP. 4)", 0.768, 0.782);
+  type("cap-title", "WEST ELEVATION", 0.782, 0.80);
+  type("nt-0", "NOTES:", 0.782, 0.79);
+  type("nt-1", "1. ALL DIMENSIONS IN FEET AND INCHES.", 0.79, 0.805);
+  type("nt-2", "2. RIVET PITCH 3\" ALONG ALL SEAMS.", 0.798, 0.812);
+  type("nt-3", "3. TANK CAPACITY 150,000 GAL.", 0.806, 0.82);
+
+  /* ── the model: a tiny 3D wireframe projector ───────────── */
+  const V = [];      // vertices [x,y,z] in feet
+  const E = [];      // edges [i,j]
+  const vtx = (x, y, z) => (V.push([x, y, z]) - 1);
+  const edge = (a, b) => E.push([a, b]);
+
+  // tank cylinder r=8, y 26..38; roof apex 42; legs to ±11 at ground
+  const SEG = 12;
+  const ringB = [], ringT = [];
+  for (let i = 0; i < SEG; i++) {
+    const t = (i / SEG) * Math.PI * 2;
+    ringB.push(vtx(Math.cos(t) * 8, 26, Math.sin(t) * 8));
+    ringT.push(vtx(Math.cos(t) * 8, 38, Math.sin(t) * 8));
+  }
+  for (let i = 0; i < SEG; i++) {
+    edge(ringB[i], ringB[(i + 1) % SEG]);
+    edge(ringT[i], ringT[(i + 1) % SEG]);
+    if (i % 2 === 0) edge(ringB[i], ringT[i]);
+  }
+  const apex = vtx(0, 42, 0), fin = vtx(0, 43.6, 0);
+  for (let i = 0; i < SEG; i += 2) edge(ringT[i], apex);
+  edge(apex, fin);
+
+  // legs at 45-degree corners, splayed 11ft at ground to 6.4ft at tank
+  const legTop = [], legBot = [], legMid1 = [], legMid2 = [];
+  for (let i = 0; i < 4; i++) {
+    const t = (i / 4) * Math.PI * 2 + Math.PI / 4;
+    const cx = Math.cos(t), cz = Math.sin(t);
+    const top = vtx(cx * 6.4, 26, cz * 6.4);
+    const bot = vtx(cx * 11, 0, cz * 11);
+    legTop.push(top); legBot.push(bot);
+    edge(top, bot);
+    legMid1.push(vtx(cx * 7.9, 17.3, cz * 7.9));
+    legMid2.push(vtx(cx * 9.5, 8.7, cz * 9.5));
+  }
+  for (let i = 0; i < 4; i++) {
+    const j = (i + 1) % 4;
+    edge(legMid1[i], legMid1[j]);
+    edge(legMid2[i], legMid2[j]);
+    edge(legMid1[i], legMid2[j]);
+    edge(legMid2[i], legMid1[j]);
+    edge(legTop[i], legMid1[j]);
+    edge(legMid1[i], legTop[j]);
+  }
+  // riser
+  edge(vtx(0, 0, 0), vtx(0, 26, 0));
+
+  const gModel = $("g-model");
+  const lines = E.map(() => {
+    const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    gModel.append(l);
+    return l;
+  });
+
+  let rotY = 0, rotVel = 0, tiltX = -0.16;
+  function renderModel(lift) {
+    // lift: 0..1 — rises off the sheet and swells
+    const scale = 6.4 + lift * 2.3;
+    const cx = 430, cy = 700 - lift * 58;
+    const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+    const cosX = Math.cos(tiltX), sinX = Math.sin(tiltX);
+    const P = V.map(([x, y, z]) => {
+      let px = x * cosY + z * sinY;
+      let pz = -x * sinY + z * cosY;
+      let py = y * cosX - pz * sinX;
+      pz = y * sinX + pz * cosX;
+      const d = 1 / (1 + pz / 90);   // gentle perspective
+      return [cx + px * scale * d, cy - py * scale * d];
+    });
+    for (let i = 0; i < E.length; i++) {
+      const [a, b] = E[i];
+      lines[i].setAttribute("x1", P[a][0].toFixed(1));
+      lines[i].setAttribute("y1", P[a][1].toFixed(1));
+      lines[i].setAttribute("x2", P[b][0].toFixed(1));
+      lines[i].setAttribute("y2", P[b][1].toFixed(1));
+    }
+  }
+
+  /* ── scroll → progress ──────────────────────────────────── */
+  const track = $("track");
+  const sheet = $("sheet");
+  const stamp = $("g-stamp");
+  const pen = $("g-pen");
+  const hudPhase = $("hud-phase");
+  const hudCoord = $("hud-coord");
+  const dragHint = $("drag-hint");
+  const turntable = $("turntable");
+  const drawing2d = ["g-border", "g-titleblock", "g-titletext", "g-datum", "g-constr",
+    "g-structure", "g-detail", "g-hatch", "g-dims", "g-dimtext"].map($);
+
+  let p = 0;
+
+  const PHASES = [
+    [0.11, "PH 01 · SHEET & DATUM"],
+    [0.30, "PH 02 · STRUCTURE"],
+    [0.50, "PH 03 · DETAIL"],
+    [0.62, "PH 04 · HATCHING"],
+    [0.82, "PH 05 · DIMENSIONS"],
+    [0.88, "PH 06 · RELEASE"],
+    [1.01, "PH 07 · LIFT-OFF"],
+  ];
+
+  function apply(pv) {
+    // solid strokes
+    let active = null;
+    for (const s of strokes) {
+      const k = win(pv, s.a, s.b);
+      s.el.style.strokeDashoffset = `${s.L * (1 - k)}`;
+      if (k > 0 && k < 1) active = { el: s.el, k, L: s.L };
+    }
+    for (const c of clips) {
+      const k = win(pv, c.a, c.b);
+      c.rect.setAttribute("height", ((c.y1 - c.y0) * k).toFixed(1));
+    }
+    for (const t of texts) {
+      const k = win(pv, t.a, t.b);
+      t.el.textContent = t.full.slice(0, Math.round(t.full.length * k));
+    }
+
+    // pen crosshair rides the active stroke
+    if (active && pv < 0.83) {
+      const pt = active.el.getPointAtLength(active.k * active.L);
+      pen.setAttribute("transform", `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
+      pen.setAttribute("opacity", "1");
+      hudCoord.textContent = `E ${(pt.x / 12).toFixed(1)} · N ${((850 - pt.y) / 12).toFixed(1)}`;
+    } else pen.setAttribute("opacity", "0");
+
+    // lift-off
+    const kl = win(pv, 0.88, 1);
+    const eased = kl * kl * (3 - 2 * kl);
+
+    // stamp thunks in, then fades with the rest of the linework
+    const ks = win(pv, 0.83, 0.865);
+    const overshoot = ks === 0 ? 0 : ks === 1 ? 1 : 1 - Math.pow(2, -9 * ks) * Math.cos(ks * 9);
+    stamp.setAttribute("opacity", (Math.min(1, ks * 2) * (1 - eased * 0.86)).toFixed(3));
+    stamp.setAttribute("transform", `rotate(-8) scale(${(1.7 - 0.7 * overshoot).toFixed(3)})`);
+    for (const g of drawing2d) g.setAttribute("opacity", String(1 - eased * 0.86));
+    gModel.setAttribute("opacity", String(eased));
+    $("model-shadow").setAttribute("opacity", (eased * 0.5).toFixed(2));
+    $("model-shadow").setAttribute("rx", (150 * eased).toFixed(1));
+    $("model-shadow").setAttribute("ry", (16 * eased).toFixed(1));
+    sheet.style.filter = `brightness(${1 - eased * 0.28})`;
+    sheet.style.transform = `rotateX(${(eased * 4).toFixed(2)}deg) scale(${1 - eased * 0.02})`;
+    if (eased > 0) renderModel(eased);
+
+    turntable.style.display = kl > 0.7 ? "block" : "none";
+    dragHint.style.opacity = kl > 0.9 ? "1" : "0";
+
+    for (const [limit, label] of PHASES) {
+      if (pv < limit) { hudPhase.textContent = label; break; }
+    }
+  }
+
+  /* ── main loop ──────────────────────────────────────────── */
+  let last = null, idle = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+
+    const max = track.scrollHeight - innerHeight;
+    const target = max > 0 ? clamp01(scrollY / max) : 1;
+    p = reduced ? target : p + (target - p) * Math.min(1, 9 * dt);
+    if (Math.abs(target - p) < 0.0004) p = target;
+    apply(p);
+
+    // model spin: inertia from drag, else a slow idle turn
+    if (p > 0.88) {
+      idle += dt;
+      if (!dragging && !reduced && idle > 2.4) rotVel += (0.35 - rotVel) * 0.02;
+      rotY += rotVel * dt;
+      rotVel *= Math.pow(0.14, dt);
+      if (p >= 0.999) renderModel(1);
+    }
+  }
+  requestAnimationFrame(frame);
+
+  /* ── turntable drag ─────────────────────────────────────── */
+  let dragging = false, lastX = 0;
+  turntable.addEventListener("pointerdown", (e) => {
+    dragging = true; lastX = e.clientX; idle = 0; rotVel = 0;
+    turntable.classList.add("grabbing");
+    turntable.setPointerCapture(e.pointerId);
+  });
+  turntable.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX;
+    lastX = e.clientX;
+    rotY += dx * 0.008;
+    rotVel = dx * 0.45;
+    idle = 0;
+  });
+  const release = () => { dragging = false; turntable.classList.remove("grabbing"); };
+  turntable.addEventListener("pointerup", release);
+  turntable.addEventListener("pointercancel", release);
+
+  apply(0);
+})();
+</script>
+</body>
+</html>

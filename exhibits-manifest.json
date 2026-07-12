@@ -150,6 +150,18 @@
       "createdAt": "2026-07-12",
       "dependencies": [],
       "accentColor": "#ff5a26"
+    },
+    {
+      "slug": "blueprint",
+      "title": "Blueprint",
+      "description": "A cyanotype drawing of a municipal water tower that constructs itself on scroll: datum lines, structure, bracing, hatching, dimensions, and typed annotations inked stroke by stroke in draftsman order behind a traveling pen crosshair. A red stamp thunks in, then the elevation lifts off the paper into a rotatable 3D wireframe.",
+      "entry": "exhibits/blueprint/index.html",
+      "tags": ["svg", "scroll", "animation", "3d"],
+      "status": "live",
+      "author": "claude",
+      "createdAt": "2026-07-12",
+      "dependencies": [],
+      "accentColor": "#4fa8ff"
     }
   ]
 }
