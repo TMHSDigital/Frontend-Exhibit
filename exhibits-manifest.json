@@ -126,6 +126,18 @@
       "createdAt": "2026-07-08",
       "dependencies": [],
       "accentColor": "#c9b8f0"
+    },
+    {
+      "slug": "specimen-book",
+      "title": "The Specimen Book",
+      "description": "A vintage type foundry catalogue for Fraunces, bound as a turnable book. Each variable axis gets its own spread with a brass scrubber driving the live font, a waterfall of cuttings, and a closing spread where all four axes swing on their own periods like an orchestra tuning.",
+      "entry": "exhibits/specimen-book/index.html",
+      "tags": ["typography", "animation", "micro-interactions", "layout"],
+      "status": "live",
+      "author": "claude",
+      "createdAt": "2026-07-12",
+      "dependencies": [],
+      "accentColor": "#a63b2a"
     }
   ]
 }

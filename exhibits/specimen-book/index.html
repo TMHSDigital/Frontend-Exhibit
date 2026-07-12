@@ -1,0 +1,1105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>The Specimen Book — Frontend Exhibit</title>
+<meta name="description" content="A vintage type foundry catalogue for Fraunces, presented as turnable pages. Every variable axis gets its own spread with live scrubbing." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --page-w: 480px;
+    --page-h: 640px;
+    --turn-dur: 1050ms;
+    --turn-ease: cubic-bezier(0.36, 0.02, 0.18, 1);
+
+    --hall: #100e0c;
+    --paper: #f0e7d0;
+    --paper-deep: #e4d7b6;
+    --ink: #2b2521;
+    --faded: #756750;
+    --rubric: #a63b2a;
+    --gilt: #d3a758;
+    --gilt-dim: #8f6f33;
+    --leather: #33200f;
+    --leather-lit: #4a2f17;
+
+    --serif: "Fraunces", Georgia, serif;
+    --mono: "Spline Sans Mono", ui-monospace, monospace;
+  }
+
+  * { margin: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: var(--serif);
+    background: var(--hall);
+    color: var(--paper);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* The reading room: a pool of lamplight on a dark table */
+  .hall {
+    position: relative;
+    height: 100dvh;
+    display: grid;
+    place-items: center;
+  }
+  .hall::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 62% 58% at 50% 42%,
+        rgb(211 167 88 / 0.10), rgb(211 167 88 / 0.03) 55%, transparent 78%);
+    pointer-events: none;
+  }
+  /* Film grain, matching the gallery hub */
+  .hall::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .scale { transform-origin: center; }
+
+  .scene {
+    perspective: 2600px;
+    width: calc(var(--page-w) * 2);
+    height: var(--page-h);
+    transition: transform 900ms var(--turn-ease);
+    transform: translateX(var(--shift, 23%));
+    filter: drop-shadow(0 42px 60px rgb(0 0 0 / 0.55));
+  }
+
+  .book {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+  }
+
+  /* Spine shadow cast onto the table between the boards */
+  .book::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 1%;
+    width: 2px;
+    height: 98%;
+    transform: translateX(-50%);
+    background: rgb(0 0 0 / 0.5);
+    filter: blur(3px);
+  }
+
+  .leaf {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    transition: transform var(--turn-dur) var(--turn-ease);
+  }
+  .leaf.turned { transform: rotateY(-180deg); }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .face.back { transform: rotateY(180deg); }
+
+  /* ── Paper ────────────────────────────────────────────────── */
+  .page {
+    position: relative;
+    height: 100%;
+    padding: 44px 44px 40px;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.48 0 0 0 0 0.36 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23p)'/%3E%3C/svg%3E"),
+      var(--paper);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+  }
+  /* Gutter shading: right pages darken toward the left edge, left pages toward the right */
+  .page.right { box-shadow: inset 26px 0 34px -22px rgb(60 42 20 / 0.55); }
+  .page.left  { box-shadow: inset -26px 0 34px -22px rgb(60 42 20 / 0.55); }
+
+  /* Turning light: sheen that sweeps a leaf mid-turn */
+  .face::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(100deg,
+      rgb(43 37 33 / 0.22), transparent 45%, rgb(255 250 235 / 0.16) 70%, rgb(43 37 33 / 0.2));
+    transition: opacity 300ms ease;
+  }
+  .leaf.turning .face::after { opacity: 1; }
+
+  .running-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--faded);
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgb(43 37 33 / 0.25);
+    margin-bottom: 26px;
+  }
+  .running-head .no { color: var(--rubric); }
+
+  .page-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+  .folio {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--faded);
+    font-variant-numeric: oldstyle-nums;
+  }
+  .page.left  .folio { text-align: left; }
+  .page.right .folio { text-align: right; }
+
+  /* Folded corner turn affordances */
+  .corner {
+    position: absolute;
+    bottom: 0;
+    width: 64px;
+    height: 64px;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    z-index: 5;
+  }
+  .corner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transition: transform 350ms var(--turn-ease), filter 350ms ease;
+  }
+  .corner.next { right: 0; }
+  .corner.next::before {
+    background: linear-gradient(315deg, var(--paper-deep) 50%, rgb(43 37 33 / 0.18) 50.5%, transparent 56%);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    transform-origin: bottom right;
+  }
+  .corner.prev { left: 0; }
+  .corner.prev::before {
+    background: linear-gradient(45deg, var(--paper-deep) 50%, rgb(43 37 33 / 0.18) 50.5%, transparent 56%);
+    clip-path: polygon(0 0, 100% 100%, 0 100%);
+    transform-origin: bottom left;
+  }
+  .corner:hover::before, .corner:focus-visible::before {
+    transform: scale(1.35);
+    filter: brightness(0.96);
+  }
+  .corner:focus-visible { outline: 2px solid var(--rubric); outline-offset: -2px; }
+
+  /* ── Cover boards ─────────────────────────────────────────── */
+  .board {
+    position: relative;
+    height: 100%;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='l'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.1 0 0 0 0 0.05 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23l)'/%3E%3C/svg%3E"),
+      radial-gradient(ellipse 120% 90% at 30% 20%, var(--leather-lit), var(--leather) 70%);
+    color: var(--gilt);
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    text-align: center;
+    cursor: pointer;
+    padding: 40px;
+  }
+  .board::before {
+    content: "";
+    position: absolute;
+    inset: 18px;
+    border: 1px solid rgb(211 167 88 / 0.65);
+    outline: 3px double rgb(211 167 88 / 0.35);
+    outline-offset: 5px;
+    pointer-events: none;
+  }
+  .board .foundry {
+    font-size: 12px;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--gilt-dim);
+  }
+  .board h1 {
+    margin: 26px 0 18px;
+    font-size: 58px;
+    font-weight: 500;
+    letter-spacing: 0.045em;
+    font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0;
+    text-shadow: 0 1px 0 rgb(0 0 0 / 0.6), 0 0 22px rgb(211 167 88 / 0.28);
+  }
+  .board .sub {
+    font-style: italic;
+    font-weight: 300;
+    font-size: 18px;
+    color: var(--gilt);
+    opacity: 0.9;
+  }
+  .board .rule {
+    width: 130px;
+    height: 1px;
+    margin: 26px 0;
+    background: linear-gradient(90deg, transparent, var(--gilt), transparent);
+  }
+  .board .hint {
+    font-size: 12.5px;
+    font-style: italic;
+    color: var(--gilt-dim);
+  }
+  .board.back-board { cursor: default; }
+
+  /* ── Frontispiece and title ───────────────────────────────── */
+  .frontis {
+    flex: 1;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    text-align: center;
+    gap: 18px;
+    color: var(--faded);
+  }
+  .frontis .mark {
+    font-size: 150px;
+    line-height: 1;
+    color: var(--rubric);
+    font-variation-settings: "opsz" 144, "wght" 500, "SOFT" 40, "WONK" 1;
+  }
+  .frontis .imprint { font-style: italic; font-size: 14px; max-width: 30ch; line-height: 1.7; }
+
+  .title-page { flex: 1; display: flex; flex-direction: column; text-align: center; align-items: center; }
+  .title-page .kicker {
+    font-size: 12px; letter-spacing: 0.34em; text-transform: uppercase; color: var(--rubric);
+    margin: 26px 0 18px;
+  }
+  .title-page h2 {
+    font-size: 88px;
+    font-weight: 400;
+    line-height: 0.95;
+    font-variation-settings: "opsz" 144;
+    letter-spacing: 0.01em;
+  }
+  .title-page .speak {
+    margin-top: 20px;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 19px;
+    color: var(--faded);
+    max-width: 30ch;
+    line-height: 1.5;
+  }
+  .title-page .axes-list {
+    margin-top: 34px;
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 6px 40px;
+    text-align: left;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink);
+    border-top: 1px solid rgb(43 37 33 / 0.3);
+    border-bottom: 1px solid rgb(43 37 33 / 0.3);
+    padding: 14px 26px;
+    font-variant-numeric: oldstyle-nums;
+  }
+  .title-page .axes-list b { font-weight: 600; letter-spacing: 0.16em; font-size: 11.5px; }
+  .title-page .fleuron { margin-top: auto; color: var(--rubric); font-size: 22px; }
+
+  /* ── Axis spreads ─────────────────────────────────────────── */
+  .glyph-stage {
+    flex: 1;
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 0;
+  }
+  .glyph-stage .live-glyph {
+    font-size: 285px;
+    line-height: 0.8;
+    letter-spacing: -0.02em;
+    font-optical-sizing: none;
+    color: var(--ink);
+    user-select: none;
+    cursor: pointer;
+    transition: transform 320ms var(--turn-ease);
+  }
+  .glyph-stage .live-glyph.pressed { transform: scale(0.965); }
+  .glyph-stage .axis-tag {
+    position: absolute;
+    top: 6px;
+    left: 0;
+    writing-mode: vertical-rl;
+    font-size: 11px;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--rubric);
+  }
+  .axis-readout {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-top: 1px solid rgb(43 37 33 / 0.3);
+    padding-top: 14px;
+  }
+  .axis-readout .value {
+    font-size: 64px;
+    font-weight: 300;
+    color: var(--rubric);
+    font-variant-numeric: oldstyle-nums tabular-nums;
+    line-height: 1;
+  }
+  .axis-readout .range { font-size: 12.5px; font-style: italic; color: var(--faded); }
+
+  .axis-right h3 {
+    font-size: 30px;
+    font-weight: 500;
+    font-variation-settings: "opsz" 100;
+  }
+  .axis-right .blurb {
+    margin-top: 12px;
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: #453c30;
+    font-weight: 340;
+  }
+  .axis-right .blurb .lead { color: var(--rubric); font-weight: 600; letter-spacing: 0.1em; font-size: 12px; }
+
+  /* The brass scrubber */
+  .scrubber { margin: 26px 0 8px; user-select: none; }
+  .scrubber .rail {
+    position: relative;
+    height: 34px;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .scrubber .rail::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 6px;
+    transform: translateY(-50%);
+    border-radius: 3px;
+    background: linear-gradient(180deg, #8a6a33, #c9a259 45%, #7a5c2c);
+    box-shadow: inset 0 1px 1px rgb(255 240 200 / 0.5), 0 1px 2px rgb(0 0 0 / 0.35);
+  }
+  .scrubber .ticks {
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 14px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    background-image: repeating-linear-gradient(90deg,
+      rgb(43 37 33 / 0.4) 0 1px, transparent 1px calc(100% / 8));
+    background-size: calc(100% - 1px) 100%;
+    opacity: 0.5;
+  }
+  .scrubber .knob {
+    position: absolute;
+    top: 50%;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px solid #5d431c;
+    cursor: grab;
+    background:
+      repeating-conic-gradient(from 0deg, rgb(60 40 12 / 0.55) 0deg 6deg, transparent 6deg 12deg),
+      radial-gradient(circle at 35% 30%, #ecd9a8, #c19a4f 55%, #7d5e28);
+    box-shadow: 0 2px 5px rgb(0 0 0 / 0.4), inset 0 1px 1px rgb(255 245 210 / 0.6);
+    transition: box-shadow 200ms ease;
+  }
+  .scrubber .knob:active { cursor: grabbing; }
+  .scrubber.dragging .knob, .scrubber .knob:focus-visible {
+    box-shadow: 0 2px 5px rgb(0 0 0 / 0.4), 0 0 0 5px rgb(166 59 42 / 0.25);
+    outline: none;
+  }
+  .scrubber .bounds {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--faded);
+    font-variant-numeric: oldstyle-nums;
+    margin-top: 2px;
+  }
+
+  .waterfall { margin-top: 18px; border-top: 1px solid rgb(43 37 33 / 0.3); flex: 1; min-height: 0; overflow: hidden; }
+  .waterfall .wline {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 7px 0;
+    border-bottom: 1px dotted rgb(43 37 33 / 0.28);
+  }
+  .waterfall .wline .wv {
+    flex: none;
+    width: 46px;
+    font-size: 11px;
+    color: var(--rubric);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+  }
+  .waterfall .wline .wt {
+    font-size: 25px;
+    line-height: 1.15;
+    white-space: nowrap;
+    font-optical-sizing: none;
+    overflow: hidden;
+  }
+
+  /* ── Sizes spread ─────────────────────────────────────────── */
+  .sizes .sline {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 8px 0;
+    border-bottom: 1px dotted rgb(43 37 33 / 0.28);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .sizes .sline .sname {
+    flex: none;
+    width: 106px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--rubric);
+  }
+  .sizes .sline .st { line-height: 1.05; }
+
+  .charset {
+    margin-top: 6px;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    border-left: 1px solid rgb(43 37 33 / 0.25);
+    border-top: 1px solid rgb(43 37 33 / 0.25);
+  }
+  .charset span {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1 / 0.98;
+    font-size: 19px;
+    font-variation-settings: "opsz" 40;
+    border-right: 1px solid rgb(43 37 33 / 0.25);
+    border-bottom: 1px solid rgb(43 37 33 / 0.25);
+    transition: font-variation-settings 400ms ease, color 400ms ease;
+  }
+  .charset span:hover { font-variation-settings: "opsz" 40, "wght" 800, "SOFT" 100, "WONK" 1; color: var(--rubric); }
+
+  /* ── Orchestra spread ─────────────────────────────────────── */
+  .orchestra-stage {
+    flex: 1;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 26px;
+    text-align: center;
+  }
+  .orchestra-word {
+    font-size: 96px;
+    line-height: 1;
+    color: var(--ink);
+    font-optical-sizing: none;
+    white-space: nowrap;
+  }
+  .orchestra-word span { display: inline-block; }
+  .orchestra-line {
+    font-size: 21px;
+    line-height: 1.7;
+    max-width: 24ch;
+    font-optical-sizing: none;
+    color: #453c30;
+  }
+  .orchestra-line .w { display: inline-block; white-space: nowrap; }
+  .orchestra-line .w span { display: inline-block; }
+
+  .gauges { margin-top: 22px; display: grid; gap: 16px; }
+  .gauge .g-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--faded);
+  }
+  .gauge .g-head output { color: var(--rubric); font-size: 14px; letter-spacing: 0.04em; font-variant-numeric: tabular-nums oldstyle-nums; }
+  .gauge .g-rail {
+    margin-top: 5px;
+    height: 5px;
+    background: rgb(43 37 33 / 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .gauge .g-fill {
+    height: 100%;
+    width: 50%;
+    background: linear-gradient(90deg, var(--gilt-dim), var(--rubric));
+    border-radius: 2px;
+  }
+
+  .baton {
+    margin-top: 30px;
+    align-self: center;
+    font: inherit;
+    font-style: italic;
+    font-size: 16px;
+    color: var(--paper);
+    background: var(--rubric);
+    border: 0;
+    border-radius: 3px;
+    padding: 0.6em 1.6em;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    box-shadow: 0 2px 0 #6d2318;
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+  .baton:hover { transform: translateY(-1px); box-shadow: 0 3px 0 #6d2318; }
+  .baton:active { transform: translateY(1px); box-shadow: 0 1px 0 #6d2318; }
+  .baton:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .quiet-note { margin-top: 16px; font-size: 12.5px; font-style: italic; color: var(--faded); text-align: center; }
+
+  /* ── Colophon & finis ─────────────────────────────────────── */
+  .colophon-page { flex: 1; display: flex; flex-direction: column; font-size: 14.5px; line-height: 1.75; color: #453c30; }
+  .colophon-page h4 { font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--rubric); margin-bottom: 18px; }
+  .colophon-page p + p { margin-top: 12px; }
+  .colophon-page a { color: var(--rubric); }
+  .colophon-page .fleuron { margin-top: auto; text-align: center; color: var(--rubric); font-size: 20px; }
+
+  .finis {
+    flex: 1;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 22px;
+    color: var(--faded);
+  }
+  .finis .word {
+    font-size: 56px;
+    font-weight: 300;
+    font-style: italic;
+    letter-spacing: 0.24em;
+    padding-left: 0.24em;
+    color: var(--ink);
+    font-variation-settings: "opsz" 144;
+  }
+  .finis .orn { color: var(--rubric); font-size: 26px; }
+
+  /* ── Hall furniture ───────────────────────────────────────── */
+  .lectern-label {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 18px;
+    display: flex;
+    justify-content: center;
+    gap: 2em;
+    align-items: baseline;
+    z-index: 20;
+    font-size: 13px;
+    color: #7d6f57;
+  }
+  .lectern-label .spread-name { font-style: italic; min-width: 20ch; text-align: center; }
+  .lectern-label a {
+    color: #7d6f57;
+    text-decoration: none;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .lectern-label a:hover, .lectern-label a:focus-visible { color: var(--gilt); }
+  .lectern-label .keys { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .leaf, .scene, .corner::before { transition-duration: 1ms; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hall">
+  <div class="scale" id="scale">
+    <div class="scene" id="scene">
+      <div class="book" id="book" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="lectern-label">
+    <a href="../../" target="_top">&larr; Catalogue</a>
+    <span class="spread-name" id="spread-name">Bound in morocco, tooled in gilt</span>
+    <span class="keys">&larr; &rarr; turn the leaves</span>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ── Fraunces: the face under glass ─────────────────────── */
+  const AX = { opsz: 14, wght: 400, SOFT: 0, WONK: 0 };
+  const fvs = (o = {}) => {
+    const a = { ...AX, ...o };
+    return `"opsz" ${a.opsz}, "wght" ${a.wght}, "SOFT" ${a.SOFT}, "WONK" ${a.WONK}`;
+  };
+
+  const AXES = [
+    {
+      tag: "wght", roman: "I", name: "Weight", min: 100, max: 900, start: 400, decimals: 0,
+      glyph: "Rg",
+      blurb: "From hairline to poster black in one continuous drawing. Every stem and bowl moves in step; the thins keep their nerve while the blacks swell to fill the measure. A single face does the work of a dozen founts.",
+      stops: [100, 250, 400, 560, 720, 900],
+    },
+    {
+      tag: "opsz", roman: "II", name: "Optical size", min: 9, max: 144, start: 14, decimals: 0,
+      glyph: "Qa",
+      blurb: "Cut small, the face grows sturdy and open, ready for footnotes and ships' manifests. Cut large, the contrast sharpens and the terminals draw fine as an engraver's burin. One design, honest at every size.",
+      stops: [9, 14, 28, 56, 96, 144],
+    },
+    {
+      tag: "SOFT", roman: "III", name: "Softness", min: 0, max: 100, start: 0, decimals: 0,
+      glyph: "Sp",
+      blurb: "Softness swells every corner as if the forme were struck on damp paper. At nought the serifs sit crisp from the punchcutter's file; at one hundred the whole fount reads warm, generous, and a little well fed.",
+      stops: [0, 20, 40, 60, 80, 100],
+    },
+    {
+      tag: "WONK", roman: "IV", name: "Wonk", min: 0, max: 1, start: 0, decimals: 2,
+      glyph: "an",
+      blurb: "The wonk axis lets the letters lean into their nineteenth-century manners: stems tilt off the perpendicular, joins droop, and the lowercase takes on the charm of a fount worn smooth by fifty years of hard printing.",
+      stops: [0, 0.25, 0.5, 0.75, 1, 1],
+    },
+  ];
+
+  const SIZES = [
+    { name: "Canon", px: 54, text: "Movable" },
+    { name: "Double Pica", px: 40, text: "types, well" },
+    { name: "Great Primer", px: 31, text: "cut, will outlast" },
+    { name: "English", px: 24, text: "the hand that set them," },
+    { name: "Pica", px: 18.5, text: "and outlast the metal they were" },
+    { name: "Long Primer", px: 15, text: "cast in; for the drawing is the thing," },
+    { name: "Bourgeois", px: 12.5, text: "and the drawing survives casting and fire alike," },
+    { name: "Brevier", px: 10.5, text: "to be set again, by other hands, in whatever century wants letters." },
+  ];
+
+  const CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789&ÆŒ?";
+
+  /* ── Page chrome ────────────────────────────────────────── */
+  const esc = (s) => s.replace(/&(?!\w+;)/g, "&amp;").replace(/</g, "&lt;");
+
+  function page(side, inner, { folio, head, no, group, corner = true } = {}) {
+    const headHtml = head
+      ? `<div class="running-head"><span>${head}</span>${no ? `<span class="no">${no}</span>` : ""}</div>`
+      : "";
+    const folioHtml = folio ? `<div class="folio">${folio}</div>` : "";
+    const cornerHtml = corner
+      ? side === "right"
+        ? `<button class="corner next" aria-label="Turn to the next spread"></button>`
+        : `<button class="corner prev" aria-label="Turn back a spread"></button>`
+      : "";
+    return `<div class="page ${side}" ${group ? `data-group="${group}"` : ""}>
+      ${headHtml}<div class="page-body">${inner}</div>${folioHtml}${cornerHtml}</div>`;
+  }
+
+  /* ── The pages, recto and verso ─────────────────────────── */
+  const pages = [];
+
+  // 0 · front cover
+  pages.push(`
+    <div class="board" data-open>
+      <span class="foundry">Undercase Type &middot; New York</span>
+      <h1>FRAUNCES</h1>
+      <span class="sub">a specimen of the types</span>
+      <span class="rule"></span>
+      <span class="hint">Open the book &middot; exhibit No. 007</span>
+    </div>`);
+
+  // 1 · frontispiece (verso)
+  pages.push(page("left", `
+    <div class="frontis">
+      <span class="mark" style='font-variation-settings:${fvs({ opsz: 144, wght: 500, SOFT: 40, WONK: 1 })}'>&amp;</span>
+      <p class="imprint">Printed at the sign of the ampersand, for the delight of compositors, and sold by the case or the single fount.</p>
+    </div>`, { corner: true }));
+
+  // 2 · title page (recto)
+  pages.push(page("right", `
+    <div class="title-page">
+      <span class="kicker">A specimen of</span>
+      <h2>Fraunces</h2>
+      <p class="speak">a soft serif in the wonky old style, drawn for the screen and cut on four axes</p>
+      <div class="axes-list">
+        <span><b>WGHT</b> weight, 100 to 900</span>
+        <span><b>OPSZ</b> optical size, 9 to 144</span>
+        <span><b>SOFT</b> softness, 0 to 100</span>
+        <span><b>WONK</b> wonk, 0 to 1</span>
+      </div>
+      <span class="fleuron">&#10086;</span>
+    </div>`, { folio: "2" }));
+
+  // Axis spreads
+  let folioN = 3;
+  for (const ax of AXES) {
+    const group = ax.tag;
+    pages.push(page("left", `
+      <div class="glyph-stage">
+        <span class="axis-tag">${ax.name} &middot; ${ax.tag}</span>
+        <div class="live-glyph" data-live style='font-variation-settings:${fvs({ [ax.tag]: ax.start })}'>${ax.glyph}</div>
+      </div>
+      <div class="axis-readout">
+        <span class="value" data-readout>${ax.start}</span>
+        <span class="range">${ax.min} &ndash; ${ax.max} on the ${ax.tag} axis</span>
+      </div>`,
+      { head: "Fraunces &middot; Specimen", no: `No. ${ax.roman}`, folio: String(folioN++), group }));
+
+    const stops = ax.stops.map((v) =>
+      `<div class="wline"><span class="wv">${v}</span>
+       <span class="wt" style='font-variation-settings:${fvs({ [ax.tag]: v })}'>Hamburgefonstiv</span></div>`).join("");
+
+    pages.push(page("right", `
+      <div class="axis-right" data-scrub-home>
+        <h3>${ax.roman}. The ${ax.name.toLowerCase()} axis</h3>
+        <p class="blurb"><span class="lead">${ax.tag} &middot;</span> ${ax.blurb}</p>
+        <div class="scrubber" data-axis="${ax.tag}" data-min="${ax.min}" data-max="${ax.max}"
+             data-value="${ax.start}" data-decimals="${ax.decimals}">
+          <div class="rail"><div class="ticks"></div>
+            <button class="knob" role="slider" aria-label="${ax.name}"
+              aria-valuemin="${ax.min}" aria-valuemax="${ax.max}" aria-valuenow="${ax.start}"></button>
+          </div>
+          <div class="bounds"><span>${ax.min}</span><span>${ax.max}</span></div>
+        </div>
+        <div class="waterfall">${stops}</div>
+      </div>`,
+      { head: ax.name, no: `No. ${ax.roman}`, folio: String(folioN++), group }));
+  }
+
+  // Sizes spread
+  const sizeLines = SIZES.map((s) =>
+    `<div class="sline"><span class="sname">${s.name} ${s.px}</span>
+     <span class="st" style="font-size:${s.px}px; font-variation-settings:${fvs({ opsz: Math.min(144, s.px * 1.4) })}">${esc(s.text)}</span></div>`).join("");
+  pages.push(page("left", `<div class="sizes">${sizeLines}</div>`,
+    { head: "Fraunces &middot; Specimen", no: "No. V", folio: String(folioN++) }));
+
+  const cells = [...CHARSET].map((c) => `<span>${esc(c)}</span>`).join("");
+  pages.push(page("right", `
+    <div class="axis-right">
+      <h3>V. The founts, by body</h3>
+      <p class="blurb"><span class="lead">Case &middot;</span> The full character case, laid out as the compositor keeps it. Rest a finger on any sort and it answers in its heaviest, softest, wonkiest cutting.</p>
+      <div class="charset">${cells}</div>
+    </div>`,
+    { head: "The character case", no: "No. V", folio: String(folioN++) }));
+
+  // Orchestra spread
+  const orchWord = [..."Tuning"].map((c) => `<span>${c}</span>`).join("");
+  const orchLine = "all four axes at once, each to its own metronome"
+    .split(" ")
+    .map((w) => `<span class="w">${[...w].map((c) => `<span>${c}</span>`).join("")}</span>`)
+    .join(" ");
+  pages.push(page("left", `
+    <div class="orchestra-stage">
+      <div class="orchestra-word" id="orch-word">${orchWord}</div>
+      <p class="orchestra-line" id="orch-line">${orchLine}</p>
+    </div>`,
+    { head: "Fraunces &middot; Specimen", no: "No. VI", folio: String(folioN++) }));
+
+  pages.push(page("right", `
+    <div class="axis-right">
+      <h3>VI. The orchestra</h3>
+      <p class="blurb"><span class="lead">Tutti &middot;</span> Weight, optical size, softness, and wonk, each swinging on its own period, none ever quite in phase. The face never repeats itself; the drawing holds.</p>
+      <div class="gauges" id="gauges"></div>
+      <button class="baton" id="baton">Strike up</button>
+      <p class="quiet-note" id="quiet-note" hidden>Motion is stilled to honour your reduced-motion setting; the baton overrides it.</p>
+    </div>`,
+    { head: "The orchestra", no: "No. VI", folio: String(folioN++) }));
+
+  // Colophon spread
+  pages.push(page("left", `
+    <div class="colophon-page">
+      <h4>Colophon</h4>
+      <p>Fraunces is drawn by Phaedra Charles and Flavia Zimbardi of Undercase Type, and is issued under the SIL Open Font License. The drawings may be studied at
+      <a href="https://github.com/undercasetype/Fraunces" target="_blank" rel="noopener">github.com/undercasetype/Fraunces</a>.</p>
+      <p>This specimen is exhibit No. 007 of the Frontend Exhibit, set and bound entirely in HTML, CSS, and JavaScript; the leaves are three-dimensional transforms, the paper is a turbulence filter, and no image was harmed in the making.</p>
+      <p>The scrubbing, the waterfalls, and the orchestra all drive the living font-variation axes of the face itself. Nothing here is a picture of type; it is the type.</p>
+      <span class="fleuron">&#10087;</span>
+    </div>`,
+    { head: "Colophon", folio: String(folioN++) }));
+
+  pages.push(page("right", `
+    <div class="finis">
+      <span class="orn">&#10086;</span>
+      <span class="word">FINIS</span>
+      <span>Set in Fraunces, opsz 9 to 144</span>
+    </div>`,
+    { folio: String(folioN++) }));
+
+  // Back board (shows on the left once the book is read through)
+  pages.push(`
+    <div class="board back-board">
+      <span class="foundry">Undercase Type &middot; No. 007</span>
+      <span class="rule"></span>
+      <span class="hint">The reader is thanked; the type is distributed.</span>
+    </div>`);
+
+  /* ── Bind the leaves ────────────────────────────────────── */
+  const book = document.getElementById("book");
+  const scene = document.getElementById("scene");
+  const spreadName = document.getElementById("spread-name");
+
+  if (pages.length % 2) pages.push(`<div class="page left"></div>`);
+  const LEAVES = pages.length / 2;
+  const leaves = [];
+
+  for (let i = 0; i < LEAVES; i++) {
+    const leaf = document.createElement("div");
+    leaf.className = "leaf";
+    leaf.innerHTML = `<div class="face front">${pages[2 * i]}</div>
+                      <div class="face back">${pages[2 * i + 1]}</div>`;
+    book.append(leaf);
+    leaves.push(leaf);
+  }
+
+  const SPREAD_NAMES = [
+    "Bound in morocco, tooled in gilt",
+    "Title &middot; a soft serif in the wonky old style",
+    "No. I &middot; the weight axis",
+    "No. II &middot; the optical size axis",
+    "No. III &middot; the softness axis",
+    "No. IV &middot; the wonk axis",
+    "No. V &middot; sizes and the character case",
+    "No. VI &middot; the orchestra",
+    "Colophon &middot; finis",
+    "The back board",
+  ];
+
+  const TURN_MS = 1050;
+  let turned = 0;
+
+  function render() {
+    leaves.forEach((leaf, i) => {
+      leaf.classList.toggle("turned", i < turned);
+      if (!leaf.classList.contains("turning")) {
+        leaf.style.zIndex = i < turned ? i + 1 : LEAVES - i;
+      }
+    });
+    scene.style.setProperty("--shift",
+      turned === 0 ? "-23%" : turned === LEAVES ? "23%" : "0%");
+    spreadName.innerHTML = SPREAD_NAMES[Math.min(turned, SPREAD_NAMES.length - 1)];
+    syncOrchestra();
+  }
+
+  function goTo(n) {
+    n = Math.max(0, Math.min(LEAVES, n));
+    if (n === turned) return;
+    const moving = n > turned ? leaves.slice(turned, n) : leaves.slice(n, turned);
+    moving.forEach((leaf, k) => {
+      leaf.classList.add("turning");
+      leaf.style.zIndex = LEAVES + 2 + k;
+      leaf.style.transitionDelay = moving.length > 1 ? `${k * 70}ms` : "0ms";
+    });
+    turned = n;
+    render();
+    setTimeout(() => {
+      moving.forEach((leaf) => {
+        leaf.classList.remove("turning");
+        leaf.style.transitionDelay = "0ms";
+      });
+      render();
+    }, TURN_MS + moving.length * 70 + 60);
+  }
+
+  book.addEventListener("click", (e) => {
+    if (e.target.closest(".corner.next") || e.target.closest("[data-open]")) goTo(turned + 1);
+    else if (e.target.closest(".corner.prev")) goTo(turned - 1);
+  });
+
+  addEventListener("keydown", (e) => {
+    if (e.target.closest?.(".knob")) return;
+    if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") { e.preventDefault(); goTo(turned + 1); }
+    if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); goTo(turned - 1); }
+    if (e.key === "Home") goTo(0);
+    if (e.key === "End") goTo(LEAVES - 2);
+  });
+
+  /* ── Scrubbers ──────────────────────────────────────────── */
+  function wireScrubber(sc) {
+    const axis = sc.dataset.axis;
+    const min = +sc.dataset.min, max = +sc.dataset.max;
+    const decimals = +sc.dataset.decimals;
+    const rail = sc.querySelector(".rail");
+    const knob = sc.querySelector(".knob");
+    const group = sc.closest("[data-group]").dataset.group;
+    const lives = document.querySelectorAll(`[data-group="${group}"] [data-live]`);
+    const readout = document.querySelector(`[data-group="${group}"] [data-readout]`);
+    const glyphEl = document.querySelector(`[data-group="${group}"] .live-glyph`);
+    let value = +sc.dataset.value;
+
+    function apply() {
+      const pct = (value - min) / (max - min);
+      knob.style.left = `${pct * 100}%`;
+      knob.setAttribute("aria-valuenow", value.toFixed(decimals));
+      const shown = value.toFixed(decimals);
+      if (readout) readout.textContent = shown;
+      for (const el of lives) el.style.fontVariationSettings = fvs({ [axis]: value });
+    }
+
+    function fromEvent(e) {
+      const r = rail.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+      value = min + pct * (max - min);
+      apply();
+    }
+
+    rail.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      sc.classList.add("dragging");
+      glyphEl?.classList.add("pressed");
+      rail.setPointerCapture(e.pointerId);
+      fromEvent(e);
+    });
+    rail.addEventListener("pointermove", (e) => {
+      if (sc.classList.contains("dragging")) fromEvent(e);
+    });
+    const drop = () => {
+      sc.classList.remove("dragging");
+      glyphEl?.classList.remove("pressed");
+    };
+    rail.addEventListener("pointerup", drop);
+    rail.addEventListener("pointercancel", drop);
+
+    knob.addEventListener("keydown", (e) => {
+      const step = (max - min) / (decimals ? 20 : 40);
+      let v = value;
+      if (e.key === "ArrowRight" || e.key === "ArrowUp") v += step;
+      else if (e.key === "ArrowLeft" || e.key === "ArrowDown") v -= step;
+      else if (e.key === "Home") v = min;
+      else if (e.key === "End") v = max;
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+      value = Math.max(min, Math.min(max, v));
+      apply();
+    });
+
+    apply();
+  }
+  document.querySelectorAll(".scrubber").forEach(wireScrubber);
+
+  // Each big specimen glyph cycles through alternate showings when pressed
+  document.querySelectorAll(".live-glyph").forEach((glyph) => {
+    const showings = [glyph.textContent, "Qu", "&a", "fj", "No.", "gy"];
+    let at = 0;
+    glyph.addEventListener("click", () => {
+      at = (at + 1) % showings.length;
+      glyph.textContent = showings[at];
+    });
+    glyph.setAttribute("title", "Another showing");
+  });
+
+  /* ── The orchestra ──────────────────────────────────────── */
+  const ORCH_SPREAD = 7; // turned === 7 shows pages 13/14
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let playing = !reduced;
+
+  const baton = document.getElementById("baton");
+  const quietNote = document.getElementById("quiet-note");
+  if (reduced) quietNote.hidden = false;
+
+  const gauges = {};
+  const gaugesBox = document.getElementById("gauges");
+  for (const ax of AXES) {
+    const g = document.createElement("div");
+    g.className = "gauge";
+    g.innerHTML = `<div class="g-head"><span>${ax.name}</span><output>${ax.start}</output></div>
+                   <div class="g-rail"><div class="g-fill"></div></div>`;
+    gaugesBox.append(g);
+    gauges[ax.tag] = { fill: g.querySelector(".g-fill"), out: g.querySelector("output"), ax };
+  }
+
+  const wordEls = [...document.querySelectorAll("#orch-word span")];
+  const lineEls = [...document.querySelectorAll("#orch-line .w span")];
+
+  function batonLabel() { baton.textContent = playing ? "Rest" : "Strike up"; }
+  baton.addEventListener("click", () => { playing = !playing; batonLabel(); syncOrchestra(); });
+  batonLabel();
+
+  let rafId = null, t = 0, last = null;
+
+  function orchestraFrame(now) {
+    rafId = requestAnimationFrame(orchestraFrame);
+    if (last === null) last = now;
+    const dt = Math.min(64, now - last) / 1000;
+    last = now;
+    t += dt;
+
+    const cur = {
+      wght: 500 + 380 * Math.sin(t * 0.9),
+      opsz: 76.5 + 63 * Math.sin(t * 0.53 + 1.2),
+      SOFT: 50 + 50 * Math.sin(t * 0.37 + 2.4),
+      WONK: 0.5 + 0.5 * Math.sin(t * 0.71 + 4.1),
+    };
+
+    wordEls.forEach((el, i) => {
+      el.style.fontVariationSettings = fvs({
+        wght: 500 + 380 * Math.sin(t * 0.9 + i * 0.55),
+        opsz: 76.5 + 63 * Math.sin(t * 0.53 + i * 0.4 + 1.2),
+        SOFT: 50 + 50 * Math.sin(t * 0.37 + i * 0.7 + 2.4),
+        WONK: 0.5 + 0.5 * Math.sin(t * 0.71 + i * 0.9 + 4.1),
+      });
+    });
+    lineEls.forEach((el, i) => {
+      el.style.fontVariationSettings = fvs({
+        wght: 460 + 300 * Math.sin(t * 1.1 + i * 0.22),
+        SOFT: 50 + 50 * Math.sin(t * 0.5 + i * 0.18),
+      });
+    });
+
+    for (const [tag, g] of Object.entries(gauges)) {
+      const pct = (cur[tag] - g.ax.min) / (g.ax.max - g.ax.min);
+      g.fill.style.width = `${pct * 100}%`;
+      g.out.textContent = cur[tag].toFixed(g.ax.decimals);
+    }
+  }
+
+  function syncOrchestra() {
+    const active = turned === ORCH_SPREAD && playing;
+    if (active && rafId === null) { last = null; rafId = requestAnimationFrame(orchestraFrame); }
+    if (!active && rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  /* ── Fit the book to the room ───────────────────────────── */
+  const scaleBox = document.getElementById("scale");
+  function fit() {
+    const s = Math.min(1,
+      (innerWidth - 36) / 960,
+      (innerHeight - 110) / 640);
+    scaleBox.style.transform = `scale(${s})`;
+  }
+  addEventListener("resize", fit);
+  fit();
+
+  render();
+})();
+</script>
+</body>
+</html>
